@@ -1,0 +1,11 @@
+#cloud-config
+
+system_info:
+    default_user:
+        name: administrator
+        gecos: administrator
+        groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video]
+        ssh_authorized_keys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDJ/CY/zWcPlFSPW21FLUAqp6CWneFJJavG6NaQA1E27oGEHk3adkN50RjM7PV8BuwVzC6ZQUu7WwB+SnQ0thLMNfGKmHZ2+emRBGYYvf4NydQ2Cvrt65ecAlHLno9yMvdM0zqimY4aoymE9klsmY65xAGCGxOKmCC48OefN7eMxHbXqsM4VEnHM/wCnmRDOqFplt8SNEsJ8tMid0UBLx2WNwwKi1Y/qM27zddGTdame7SChvyxBiEaMYF0n9I+tCp3oDu4UB0YuDYJVSJnmvtUpbW3iTOVa6Jiitxk1SN76+yumgrgit129wUrCCZEcaHXoaCMFJIHyTQIWpbWZDhswfF3ZmpCqxe3PNKTWCqOLtL8RIuxQMQ99Aupsn3s41cVp02kjs8K3/sxC6YNlt0f1ertQ3FN2rbQVZmCdlffUv6pcRLBP/dwbRwEinE8VRisAJPSOj3O8l8vp6g5UTqM3tUO0odhHQ8l5YcLamIvcpnIQdrTVCotQHXwN8QcK6U= gooseubuntu@gooseubuntu-box
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash
