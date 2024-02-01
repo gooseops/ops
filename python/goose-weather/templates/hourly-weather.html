@@ -1,0 +1,12 @@
+{% extends "weather.html" %}
+{% block weather %}
+  {% for period in forecasts %}
+    <tr>
+      <td style="width:15%">{{ format_time(period['startTime']) }}</td>
+      <td style="width:10%">{{period['temperature']}}</td>
+      <td style="width:10%">{{period['probabilityOfPrecipitation']['value']}}</td>
+      <td style="width:10%">{{period['relativeHumidity']['value']}}</td>
+      <td style="width:10%">{{period['shortForecast']}}</td>
+    </tr>
+  {% endfor %}
+{% endblock weather %}
