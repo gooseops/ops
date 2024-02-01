@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Main content -->
+<h1>Goose Weather!</h1>
+<p>Using approximate Latitude {{lat}} and Longitude {{lon}}.</p>
+<p>Weather in {{locale}}</p>
+<div style="overflow-x: auto;">
+  <table>
+    <tr>
+      <th>Time at Location</th>
+      <th>Temperature</th>
+      <th>% Precipitation</th>
+      <th>% Humidity</th>
+      <th>Forecast</th>
+    </tr>
+{% block weather %}
+{% endblock weather %}
+  </table>
+</div>
+<form action="/weather" method = "POST">
+  <p>Enter US Zip Code <input type="text" name="zip_code"/></p>
+  <p>Or</p>
+  <p>Enter US City <input type="text" name="city"/>  and US State <input type="text" name="state"/></p>
+  <input type="radio" name="frequency" id=0 value="current" checked>Current</input>
+  <input type="radio" name="frequency" id=0 value="daily">Daily</input>
+  <input type="radio" name="frequency" id=1 value="hourly">Hourly</input><br>
+  <p><input type = "submit" value = "submit" /></p>
+</form>
+{% endblock content %}
