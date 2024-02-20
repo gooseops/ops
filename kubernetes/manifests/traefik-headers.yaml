@@ -1,0 +1,12 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: test-header
+spec:
+  headers:
+    frameDeny: true
+    browserXssFilter: true
+    customRequestHeaders:
+      Content-Security-Policy: "upgrade-insecure-requests"
+    customResponseHeaders:
+      Content-Security-Policy: "upgrade-insecure-requests"

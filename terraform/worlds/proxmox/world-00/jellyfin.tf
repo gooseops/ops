@@ -28,7 +28,7 @@ module "jellyfin" {
             backup      = false
             type        = "scsi"
             storage     = "local-lvm"
-            size        = "60G"
+            size        = "10G"
             ssd         = 1
         }
         

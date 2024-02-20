@@ -1,11 +1,4 @@
-variable "api_url" {
+variable "doppler_token" {
     type = string
-}
-
-variable "api_token_id" {
-    type = string
-}
-
-variable "api_token_secret" {
-    type = string
+    description = "Doppler Token"
 }

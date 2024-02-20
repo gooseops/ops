@@ -11,8 +11,8 @@ module "kubernetes_00" {
         vmid        = "207"
         target_node = "proxmox-00"
         clone       = "ubuntu-jammy-amd64"
-        cores       = 2
-        memory      = 4096
+        cores       = 1
+        memory      = 2048
         sockets     = 1
         agent       = 1
         onboot      = true
@@ -45,8 +45,8 @@ module "kubernetes_01" {
         vmid        = "208"
         target_node = "proxmox-00"
         clone       = "ubuntu-jammy-amd64"
-        cores       = 2
-        memory      = 4096
+        cores       = 4
+        memory      = 8192
         sockets     = 1
         agent       = 1
         onboot      = true
@@ -55,7 +55,7 @@ module "kubernetes_01" {
             backup      = false
             type        = "scsi"
             storage     = "local-lvm"
-            size        = "20G"
+            size        = "50G"
             ssd         = 1
         }
         

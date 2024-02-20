@@ -1,0 +1,12 @@
+Thank you for installing the {{ .Chart.Name }} helm chart.
+
+Your release is named {{ .Release.Name }}.
+
+Your installation is in the {{ .Values.env }} environment
+and is using version {{ .Values.version }} of the 
+{{ .Values.image_registry_path }} containers.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
