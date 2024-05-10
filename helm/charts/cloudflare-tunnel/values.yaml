@@ -1,0 +1,54 @@
+# default values for cloudflare tunnel helm chart
+
+## Use this to deploy Cloudflare as a either a DaemonSet or Deployment
+## with replicas. Default is Deployment.
+cloudflare_app_kind: "Deployment"
+
+## Use this to deploy set the number of replicas if using a Deployment.
+## Setting this with DaemonSet has no effect. Default is 2
+cloudflare_app_replicas: 2
+
+## Use this to override the .Release.Name default if you would prefer
+## a differently named set of resources.  Will affect all created 
+## k8s objects.
+fullnameOverride: null
+
+## This is the account id for the cloudflare account running the tunnel
+## This value is typically passed in from terraform outputs
+accounttag: ""
+
+## This is the uuid of the tunnel
+## This value is typically passed in from terraform outputs
+tunnelid: ""
+
+## This is the tunnel name
+## This value is typically passed in from terraform outputs
+tunnelname: ""
+
+## This is the tunnel secret
+## This value is typically passed in from terraform outputs
+tunnelsecret: ""
+
+## This is a list of domains that we want the tunnel to allow ingress on
+## This value is typically passed in from the module definition in the worlds directory
+webzone: []
+
+## This is the service that the ingress routes will send all traffic to once in the k8s cluster
+catchall_service: ""
+
+## This is the port that the traefik_service is running on
+catchall_port: "80"
+
+tolerations: [] # add optional tolerations here.
+    # - key: "nodepool"
+    #   operator: "Equal"
+    #   value: "default"
+    #   effect: "NoExecute"
+nodeAffinity: [] #### optional node affinity here
+    # requiredDuringSchedulingIgnoredDuringExecution:
+    #   nodeSelectorTerms:
+    #   - matchExpressions:
+    #     - key: "node_function"
+    #       operator: "In"
+    #       values:
+    #       - "default"

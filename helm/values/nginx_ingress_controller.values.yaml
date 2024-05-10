@@ -1,0 +1,4 @@
+controller:
+  service:
+    ## The type of service to create for the Ingress Controller.
+    type: ClusterIP

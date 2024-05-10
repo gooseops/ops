@@ -1,14 +1,40 @@
 terraform {
-  required_providers {
-    proxmox = {
-      source = "Telmate/proxmox"
-      version = "2.9.11"
+    required_providers {
+        proxmox = {
+            source = "Telmate/proxmox"
+            version = "~> 2.9.11"
+        }
+        cloudflare = {
+                source = "cloudflare/cloudflare"
+                version = "~> 4.0.0"
+        }
+        doppler = {
+                source = "DopplerHQ/doppler"
+                version = "~> 1.6.1"
+        }
+        helm = {
+            source = "hashicorp/helm"
+            version = "~> 2.12.1"
+        }
     }
-  }
 }
 
 provider "proxmox" {
-  pm_api_url          = var.api_url
-  pm_api_token_id     = var.api_token_id
-  pm_api_token_secret = var.api_token_secret
+    pm_api_url          = data.doppler_secrets.prod_secrets.map.PROXMOX_API_URL
+    pm_api_token_id     = data.doppler_secrets.prod_secrets.map.PROXMOX_API_TOKEN_ID
+    pm_api_token_secret = data.doppler_secrets.prod_secrets.map.PROXMOX_API_TOKEN_SECRET
+}
+
+provider "cloudflare" {
+    api_token = data.doppler_secrets.prod_secrets.map.CLOUDFLARE_API_TOKEN  
+}
+
+provider "doppler" {
+    doppler_token = var.doppler_token
+}
+
+provider "helm" {
+    kubernetes {
+        config_path = "~/.kube/config"
+    }
 }

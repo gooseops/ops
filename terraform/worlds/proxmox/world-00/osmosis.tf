@@ -1,25 +1,20 @@
 
-module "jellyfin" {
+module "osmosis" {
     source = "../../../modules/proxmox/qemu-vm/2-9-11"
 
     ciuser      = "administrator"
     sshkeys     = "/home/stephen/.ssh/id_rsa.pub"
 
     config = {
-        name        = "jellyfin"
+        name        = "osmosis"
         desc        = <<-EOT
-            Jellyfin is the volunteer-built media
-            solution that puts you in control of 
-            your media. Stream to any device from 
-            your own server, with no strings attached. 
-            Your media, your server, your way.  
-            Information can be found [here](https://jellyfin.org/).
+            vm for testing osmosis playbooks.
         EOT
-        vmid        = "206"
+        vmid        = "210"
         target_node = "proxmox-00"
         clone       = "ubuntu-jammy-amd64"
-        cores       = 1
-        memory      = 1024
+        cores       = 4
+        memory      = 4096
         sockets     = 1
         agent       = 1
         onboot      = true
@@ -28,7 +23,7 @@ module "jellyfin" {
             backup      = false
             type        = "scsi"
             storage     = "local-lvm"
-            size        = "10G"
+            size        = "50G"
             ssd         = 1
         }
         
