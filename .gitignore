@@ -6,6 +6,9 @@
 *.tfstate
 *.tfstate.*
 
+# Terraform backend config files
+**.tfbackend
+
 # Crash log files
 crash.log
 crash.*.log

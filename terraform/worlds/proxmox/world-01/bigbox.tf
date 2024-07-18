@@ -1,30 +1,32 @@
 
-module "osmosis" {
-    source = "../../../modules/proxmox/qemu-vm/2-9-11"
+module "bibox_vm" {
+    providers = {
+      proxmox = proxmox.proxmox-01
+    }
+    source = "../../../modules/proxmox/qemu-vm/3.0.1-rc1"
 
     ciuser      = "administrator"
     sshkeys     = "/home/stephen/.ssh/id_rsa.pub"
 
     config = {
-        name        = "osmosis"
+        name        = "bigbox"
         desc        = <<-EOT
-            vm for testing osmosis playbooks.
+            bigbox devbox
         EOT
-        vmid        = "210"
-        target_node = "proxmox-00"
+        vmid        = "100"
+        target_node = "proxmox-01"
         clone       = "ubuntu-jammy-amd64"
-        cores       = 4
-        memory      = 4096
+        cores       = 32
+        memory      = 61440
         sockets     = 1
         agent       = 1
         onboot      = true
         
         disk        = {
             backup      = false
-            type        = "scsi"
             storage     = "local-lvm"
-            size        = "50G"
-            ssd         = 1
+            size        = 1000
+            ssd = true
         }
         
         network     = {               
