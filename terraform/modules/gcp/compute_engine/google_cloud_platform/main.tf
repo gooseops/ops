@@ -4,13 +4,13 @@
 # }
 
 data "cloudinit_config" "conf" {
-  gzip = false
+  gzip          = false
   base64_encode = false
 
   part {
     content_type = "text/cloud-config"
-    content = file("/home/gooseubuntu/projects/goose_projects/terraform/templates/admin_cloud_config.yaml")
-    filename = "admin_cloud_config.yaml"
+    content      = file("/home/gooseubuntu/projects/goose_projects/terraform/templates/admin_cloud_config.yaml")
+    filename     = "admin_cloud_config.yaml"
   }
 }
 
@@ -23,7 +23,7 @@ resource "google_compute_instance" "openvpn" {
 
   boot_disk {
     initialize_params {
-    #   size = 10
+      #   size = 10
       image = "ubuntu-minimal-2004-lts"
     }
   }
@@ -36,12 +36,12 @@ resource "google_compute_instance" "openvpn" {
 
   metadata = {
     enable-oslogin = "TRUE"
-    user-data = "${data.cloudinit_config.conf.rendered}"
+    user-data      = "${data.cloudinit_config.conf.rendered}"
   }
 
-#   service_account {
-#     # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
-#     email  = google_service_account.default.email
-#     scopes = ["cloud-platform"]
-#   }
+  #   service_account {
+  #     # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
+  #     email  = google_service_account.default.email
+  #     scopes = ["cloud-platform"]
+  #   }
 }

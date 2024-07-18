@@ -1,13 +1,13 @@
 
 module "wireguard" {
-    source = "../../../modules/proxmox/qemu-vm/2-9-11"
+  source = "../../../modules/proxmox/qemu-vm/2-9-11"
 
-    ciuser      = "administrator"
-    sshkeys     = "/home/stephen/.ssh/id_rsa.pub"
+  ciuser  = "administrator"
+  sshkeys = "/home/stephen/.ssh/id_rsa.pub"
 
-    config = {
-        name        = "wireguard"
-        desc        = <<-EOT
+  config = {
+    name        = "wireguard"
+    desc        = <<-EOT
             WireGuard® is an extremely simple yet fast and modern VPN that utilizes 
             state-of-the-art cryptography. It aims to be faster, simpler, leaner, and more 
             useful than IPsec, while avoiding the massive headache. It intends to be 
@@ -18,27 +18,27 @@ module "wireguard" {
             currently under heavy development, but already it might be regarded as the most secure,
             easiest to use, and simplest VPN solution in the industry.
         EOT
-        vmid        = "202"
-        target_node = "proxmox-00"
-        clone       = "debian-bookworm-amd64"
-        cores       = 2
-        memory      = 2048
-        sockets     = 1
-        agent       = 1
-        onboot      = true
-        
-        disk        = {
-            backup      = false
-            type        = "scsi"
-            storage     = "local-lvm"
-            size        = "10G"
-            ssd         = 1
-        }
-        
-        network     = {               
-            bridge      = "vmbr0"
-            firewall    = true
-            model       = "virtio"
-        }
+    vmid        = "202"
+    target_node = "proxmox-00"
+    clone       = "debian-bookworm-amd64"
+    cores       = 2
+    memory      = 2048
+    sockets     = 1
+    agent       = 1
+    onboot      = true
+
+    disk = {
+      backup  = false
+      type    = "scsi"
+      storage = "local-lvm"
+      size    = "10G"
+      ssd     = 1
     }
+
+    network = {
+      bridge   = "vmbr0"
+      firewall = true
+      model    = "virtio"
+    }
+  }
 }
