@@ -1,0 +1,99 @@
+{{- $name := include "cloudflare_tunnel.name" . -}}
+---
+apiVersion: apps/v1
+kind: {{ .Values.cloudflare_app_kind | default "DaemonSet" }}
+metadata:
+  name: {{ $name }}
+spec:
+  {{- if eq (.Values.cloudflare_app_kind | default "DaemonSet") "Deployment" }}
+  replicas: {{ .Values.cloudflare_app_replicas | default 2 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ $name }}-app
+  minReadySeconds: 5
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  {{- if .Values.tolerations }}
+  tolerations:
+  {{- toYaml .Values.tolerations | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}-app
+        date: "{{ now | unixEpoch }}"
+        cloudflare: "true"
+    spec:
+      containers:
+      - name: cloudflared
+        image: cloudflare/cloudflared:latest
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        args:
+        - tunnel
+        - --config
+        - /etc/cloudflared/config/config.yaml
+        - run
+        readinessProbe:
+          httpGet:
+            # Cloudflared has a /ready endpoint which returns 200 if and only if
+            # it has an active connection to the edge.
+            path: /ready
+            port: 2000
+          failureThreshold: 1
+          initialDelaySeconds: 10
+          periodSeconds: 2
+        # livenessProbe:
+        #   httpGet:
+        #     # Cloudflared has a /ready endpoint which returns 200 if and only if
+        #     # it has an active connection to the edge.
+        #     path: /ready
+        #     port: 2000
+        #   failureThreshold: 1
+        #   initialDelaySeconds: 10
+        #   periodSeconds: 10
+        volumeMounts:
+        - name: config
+          mountPath: /etc/cloudflared/config
+          readOnly: true
+        # Each tunnel has an associated "credentials file" which authorizes machines
+        # to run the tunnel. cloudflared will read this file from its local filesystem,
+        # and it'll be stored in a k8s secret.
+        - name: creds
+          mountPath: /etc/cloudflared/creds
+          readOnly: true
+      {{- if .Values.tolerations }}
+      tolerations:
+      {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if.Values.nodeAffinity }}
+      affinity:
+        nodeAffinity:
+      {{- toYaml .Values.nodeAffinity | nindent 10 }}
+      {{- end }}
+      volumes:
+      - name: creds
+        secret:
+          # By default, the credentials file will be created under ~/.cloudflared/<tunnel ID>.json
+          # when you run `cloudflared tunnel create`. You can move it into a secret by using:
+          # ```sh
+          # kubectl create secret generic tunnel-credentials \
+          # --from-file=credentials.json=/Users/yourusername/.cloudflared/<tunnel ID>.json
+          # ```
+          secretName: {{ $name }}-cert-secret
+      # Create a config.yaml file from the ConfigMap below.
+      - name: config
+        configMap:
+          name: {{ $name }}-configmap
+          items:
+          - key: config.yaml
+            path: config.yaml

@@ -1,7 +1,7 @@
 variable "credentials_file" {
-    type = string
+  type = string
 }
 
 variable "project_id" {
-    type = string
+  type = string
 }

@@ -58,7 +58,8 @@ packages_check
 function set_start_vmid {
     echo "Determining currrent max VMID"
     sleep 2
-    declare max_vmid=$(qm list | awk '{print $1;}' | sort -rn | head -1)
+    max_vmid=$(qm list | awk '{print $1;}' | sort -rn | head -1)
+    declare max_vmid
     [[ -z "${max_vmid}" ]] && echo "There are currently no VMIDs" || echo "The current max VMID is: ${max_vmid}"
     sleep 2
     declare -g start_vmid=$(("${max_vmid}"+1000))
@@ -78,8 +79,9 @@ declare images=(
     "ubuntu-focal-amd64,https://cloud-images.ubuntu.com/minimal/releases/focal/release/ubuntu-20.04-minimal-cloudimg-amd64.img"
     "ubuntu-jammy-amd64,https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
     "ubuntu-jammy-server-amd64,https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-    "debian-bullseye-amd64,https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-generic-amd64.qcow2"
-    "centos-stream-9-amd64,https://cloud.centos.org/centos/9-stream/x86_64/images/CentOS-Stream-GenericCloud-9-latest.x86_64.qcow2"
+    "ubuntu-noble-amd64,https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img"
+    "debian-bullseye-amd64,https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2"
+    "debian-bookworm-amd64,https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
 )
 
 function template_vmid_error {
@@ -89,7 +91,7 @@ function template_vmid_error {
 }
 
 function template_name_check  {
-    while read vmid name ; do
+    while read -r vmid name ; do
         if [ "${template_name}" == "${name}" ]; then
             echo "VMID: ${vmid} NAME: ${name} is a conflict and must be destroyed."
             if [ "${mode_noninteractive}" == true ]; then
@@ -99,7 +101,7 @@ function template_name_check  {
             else
                 echo "Do you wish to continue?" 
                 echo "Enter 'y' for yes or 'n' for no."
-                read input < /dev/tty
+                read -r input < /dev/tty
                 if [ "${input}" == "y" ]; then
                     echo "Destroying ${vmid} ${name}..."
                     qm destroy "${vmid}" --destroy-unreferenced-disks=1
@@ -130,5 +132,5 @@ for element in "${images[@]}"; do
     sleep 2
     template_name_check
     create_template
-    let "template_id++"
+    (( template_id++ ))
 done
