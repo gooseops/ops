@@ -3,7 +3,7 @@ module "test" {
   source = "../../../modules/proxmox/qemu-vm/2-9-11"
 
   ciuser  = "administrator"
-  sshkeys = "/home/stephen/.ssh/gooseops-laptop.pub"
+  sshkeys = data.doppler_secrets.prod_secrets.map.HOMELAB_PUB_KEY
 
   config = {
     name        = "test"

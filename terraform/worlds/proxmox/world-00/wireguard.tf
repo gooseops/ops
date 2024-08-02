@@ -3,7 +3,7 @@ module "wireguard" {
   source = "../../../modules/proxmox/qemu-vm/2-9-11"
 
   ciuser  = "administrator"
-  sshkeys = "/home/stephen/.ssh/id_rsa.pub"
+  sshkeys = data.doppler_secrets.prod_secrets.map.HOMELAB_PUB_KEY
 
   config = {
     name        = "wireguard"

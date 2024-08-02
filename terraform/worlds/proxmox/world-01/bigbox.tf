@@ -6,7 +6,7 @@ module "bibox_vm" {
   source = "../../../modules/proxmox/qemu-vm/3.0.1-rc1"
 
   ciuser  = "administrator"
-  sshkeys = "/home/stephen/.ssh/id_rsa.pub"
+  sshkeys = data.doppler_secrets.prod_secrets.map.HOMELAB_PUB_KEY
 
   config = {
     name        = "bigbox"
@@ -15,9 +15,9 @@ module "bibox_vm" {
         EOT
     vmid        = "100"
     target_node = "proxmox-01"
-    clone       = "ubuntu-jammy-amd64"
+    clone       = "ubuntu-noble-amd64"
     cores       = 32
-    memory      = 61440
+    memory      = 32792
     sockets     = 1
     agent       = 1
     onboot      = true
@@ -25,7 +25,7 @@ module "bibox_vm" {
     disk = {
       backup  = false
       storage = "local-lvm"
-      size    = 1000
+      size    = 500
       ssd     = true
     }
 

@@ -2,7 +2,7 @@
 resource "proxmox_vm_qemu" "proxmox-vm" {
 
   ciuser  = var.ciuser
-  sshkeys = file(var.sshkeys)
+  sshkeys = var.sshkeys
 
   name        = var.config.name
   target_node = var.config.target_node
