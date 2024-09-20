@@ -1,0 +1,11 @@
+
+- name: run vaultwarden container
+  community.docker.docker_container:
+    name: vaultwarden
+    image: vaultwarden/server:latest
+    restart_policy: unless-stopped
+    state: started
+    published_ports:
+      - "{{ app_port }}:80"
+    volumes:
+      - /vw-data/:/data/

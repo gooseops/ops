@@ -1,0 +1,4 @@
+
+- name: Configure Nginx
+  import_tasks: ubuntu-nginx.yml
+  when: ansible_facts['os_family'] == "Debian"

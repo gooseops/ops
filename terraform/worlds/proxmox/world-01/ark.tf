@@ -25,8 +25,8 @@ module "ark" {
     vmid        = "101"
     target_node = "proxmox-01"
     clone       = "ubuntu-noble-amd64"
-    cores       = 8
-    memory      = 8192
+    cores       = 2
+    memory      = 12288
     sockets     = 1
     agent       = 1
     onboot      = true
