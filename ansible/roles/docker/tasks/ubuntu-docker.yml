@@ -1,0 +1,66 @@
+- name: ubuntu-docker | pause for apt-get lock
+  become: true
+  ansible.builtin.shell: 'fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1 | echo $?'
+  register: chk_aptget
+  until: chk_aptget.stdout == "0"
+  retries: 20
+  delay: 5
+  ignore_errors: true
+
+- name: ubuntu-docker | apt packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - openssl
+      - curl
+      - ca-certificates
+    state: present
+    update-cache: true
+  tags:
+    - docker
+    - apt-packages
+
+- name: ubuntu-docker | install docker
+  become: true
+  block:
+    - name: ubuntu-docker | install docker | create keyrings directory
+      ansible.builtin.file:
+        mode: "0755"
+        path: /etc/apt/keyrings
+        state: "directory"
+
+    - name: ubuntu-docker | install docker | download docker gpg key
+      ansible.builtin.get_url:
+        dest: /etc/apt/keyrings/docker.asc
+        url: https://download.docker.com/linux/ubuntu/gpg
+        mode: '0644'
+
+    - name: ubuntu-docker | install docker | add apt repository
+      ansible.builtin.apt_repository:
+        repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable
+        state: present
+        filename: docker
+
+    - name: ubuntu-docker | install docker | install docker apt packages
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update-cache: true
+      tags:
+        - docker
+        - apt-packages
+
+- name: ubuntu-docker | add user to docker group
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: ubuntu-docker | reset connection for new group
+  ansible.builtin.meta: reset_connection

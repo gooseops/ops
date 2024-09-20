@@ -1,6 +1,9 @@
 
 # module "test" {
-#   source = "../../../modules/proxmox/qemu-vm/2-9-11"
+#   providers = {
+#     proxmox = proxmox.proxmox-01
+#   }
+#   source = "../../../modules/proxmox/qemu-vm/3.0.1-rc1"
 
 #   ciuser  = "administrator"
 #   sshkeys = data.doppler_secrets.prod_secrets.map.HOMELAB_PUB_KEY
@@ -8,23 +11,22 @@
 #   config = {
 #     name        = "test"
 #     desc        = <<-EOT
-#             test
+#             test vm
 #         EOT
-#     vmid        = "225"
-#     target_node = "proxmox-00"
+#     vmid        = "102"
+#     target_node = "proxmox-01"
 #     clone       = "ubuntu-noble-amd64"
-#     cores       = 2
-#     memory      = 2048
+#     cores       = 8
+#     memory      = 16384
 #     sockets     = 1
 #     agent       = 1
 #     onboot      = true
 
 #     disk = {
 #       backup  = false
-#       type    = "scsi"
-#       storage = "local-lvm"
-#       size    = "10G"
-#       ssd     = 1
+#       storage = "local-zfs-sda"
+#       size    = 1000
+#       ssd     = true
 #     }
 
 #     network = {
