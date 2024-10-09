@@ -31,68 +31,30 @@
  time.timeZone = "America/New_York";
 
   # Enable i3 windowManager
-  services.xserver = {
-    enable = true;
+  # services.xserver = {
+  #   enable = true;
 
-    desktopManager = {
-      xterm.enable = false;
-    };
+  #   desktopManager = {
+  #     xterm.enable = false;
+  #   };
 
-    displayManager = {
-      defaultSession = "none+i3";
-    };
+  #   displayManager = {
+  #     defaultSession = "none+i3";
+  #   };
 
-    windowManager.i3 = {
-      enable = true;
-      extraPackages = with pkgs; [
-        dmenu
-        i3status
-        i3lock
-        i3blocks
-      ];
-    }; 
-  };
-
-
-  # Enable the X11 windowing system.
-  # services.xserver.enable = true;
-  # services.xserver.displayManager.gdm.enable = true;
-  # services.xserver.desktopManager.gnome.enable = true;
-  # services.xserver.excludePackages = [ pkgs.xterm ];
-  # environment.gnome.excludePackages = (with pkgs; [
-  #  gnome-photos
-  #  gnome-tour
-# ]) ++ (with pkgs.gnome; [
-  #  cheese
-  #  gnome-terminal
-  #  gedit
-  #  epiphany
-  #  geary
-  #  evince
-  #  gnome-characters
-  #  totem
-  #  tali
-  #  iagno
-  #  hitori
-  #  atomix
-# ]);
-
-  # Configure keymap in X11
-  # services.xserver.xkb.layout = "us";
-  # services.xserver.xkb.options = "eurosign:e,caps:escape";
-
-  # Enable CUPS to print documents.
-  # services.printing.enable = true;
-
-  # Enable sound.
-  # sound.enable = true;
-  # hardware.pulseaudio.enable = true;
-
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
+  #   windowManager.i3 = {
+  #     enable = true;
+  #     extraPackages = with pkgs; [
+  #       dmenu
+  #       i3status
+  #       i3lock
+  #       i3blocks
+  #     ];
+  #   }; 
+  # };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.stephen = {
+  users.users.goose = {
     isNormalUser = true;
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
     packages = with pkgs; [
@@ -102,10 +64,7 @@
   environment.pathsToLink = [ "/libexec" ];
   environment.systemPackages = with pkgs; [
     firefox
-    gnome.gnome-terminal
-    pkgs.slack
     vim
-    vscodium
     wget
   ];
 
