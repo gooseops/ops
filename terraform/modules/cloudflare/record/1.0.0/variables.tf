@@ -24,3 +24,9 @@ variable "proxied" {
   default     = true
   description = "Whether or not the DNS resolution is proxied"
 }
+
+variable "comment" {
+  type = string
+  default = "Terraform Managed"
+  description = "The comment to include with the DNS record"
+}

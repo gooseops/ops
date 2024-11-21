@@ -5,4 +5,5 @@ resource "cloudflare_record" "record" {
   zone_id = var.zone_id
   content = var.content
   proxied = var.proxied
+  comment = var.comment
 }
