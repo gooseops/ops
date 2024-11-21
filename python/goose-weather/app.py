@@ -8,8 +8,7 @@
 #Database cache for geocoords
 #Abstract base class for geolocation
 #Caching geolocation extension
-
-
+import os
 """
 Module for serving Flask App
 """
@@ -18,6 +17,7 @@ import requests
 from flask import Flask, render_template, request
 
 GEOCODE_API_URL="https://geocode.maps.co"
+GEOCODE_API_KEY=os.environ['GEOCODE_API_KEY']
 WEATHER_API_URL="https://api.weather.gov"
 
 app = Flask(__name__)
@@ -26,7 +26,7 @@ def get_lat_lon(zip_code:str=None, city:str=None, state:str=None):
     """
     Return the coordinates and location based on a search.
     """
-    response=requests.get(f"{GEOCODE_API_URL}/search?q={zip_code}+{city}+{state}+US",
+    response=requests.get(f"{GEOCODE_API_URL}/search?q={zip_code}+{city}+{state}+US&api_key={GEOCODE_API_KEY}",
                           timeout=10).json()
     lat=round(float(response[0]['lat']), 4)
     lon=round(float(response[0]['lon']), 4)
