@@ -23,11 +23,11 @@ The goal of this repository is to provide an easy-to-launch self-hosted weather 
 ### Process
 - Clone the repository
     ```
-    git clone https://github.com/gooseops/goose_weather.git
+    git clone https://github.com/gooseops/ops.git
     ```
 - Change directory to cloned repository
     ```
-    cd goose_weather
+    cd ops/python/goose-weather
     ```
 - Create a virtual `python3` environment for this project to manage dependencies
     ```
