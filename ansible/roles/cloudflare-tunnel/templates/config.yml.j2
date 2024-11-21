@@ -1,0 +1,7 @@
+tunnel: "{{ tunnelname }}"
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: "{{ hostname }}"
+    service: "{{ service_name }}:{{ service_port }}"
+  - service: "{{ catchall_service }}:{{ catchall_port }}"

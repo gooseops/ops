@@ -1,0 +1,14 @@
+---
+- hosts: all
+  roles:
+    - role: cloudflare-tunnel
+      vars:
+        accounttag:       "{{ lookup('ansible.builtin.env', 'ARK_TUNNEL_ACCOUNTTAG')}}"
+        tunnelid:         "{{ lookup('ansible.builtin.env', 'ARK_TUNNEL_TUNNELID')}}"
+        tunnelname:       "{{ lookup('ansible.builtin.env', 'ARK_TUNNEL_TUNNELNAME')}}"
+        tunnelsecret:     "{{ lookup('ansible.builtin.env', 'ARK_TUNNEL_TUNNELSECRET')}}"
+        hostname:         "ark.goosesops.com"
+        service_name:     "http://localhost"
+        service_port:     "7777"
+        catchall_service: "http_status"
+        catchall_port:    "404"

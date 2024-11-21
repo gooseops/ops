@@ -13,7 +13,7 @@
 #     desc        = <<-EOT
 #             test vm
 #         EOT
-#     vmid        = "102"
+#     vmid        = "110"
 #     target_node = "proxmox-01"
 #     clone       = "ubuntu-noble-amd64"
 #     cores       = 8

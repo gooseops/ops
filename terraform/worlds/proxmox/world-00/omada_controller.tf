@@ -11,8 +11,8 @@ module "omada_controller" {
     vmid        = "200"
     target_node = "proxmox-00"
     clone       = "ubuntu-focal-amd64"
-    cores       = 1
-    memory      = 1024
+    cores       = 2
+    memory      = 2048
     sockets     = 1
     agent       = 1
     onboot      = true

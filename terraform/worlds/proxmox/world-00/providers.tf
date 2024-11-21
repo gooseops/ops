@@ -8,6 +8,10 @@ terraform {
       source  = "DopplerHQ/doppler"
       version = "~> 1.6.1"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4"
+    }
   }
 }
 
@@ -19,4 +23,8 @@ provider "proxmox" {
 
 provider "doppler" {
   doppler_token = var.doppler_token
+}
+
+provider "cloudflare" {
+  api_token = data.doppler_secrets.prod_secrets.map.CLOUDFLARE_API_TOKEN
 }
