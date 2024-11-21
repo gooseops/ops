@@ -5,19 +5,8 @@
 <h1>Goose Weather!</h1>
 <p>Using approximate Latitude {{lat}} and Longitude {{lon}}.</p>
 <p>Weather in {{locale}}</p>
-<div style="overflow-x: auto;">
-  <table>
-    <tr>
-      <th>Time at Location</th>
-      <th>Temperature</th>
-      <th>% Precipitation</th>
-      <th>% Humidity</th>
-      <th>Forecast</th>
-    </tr>
 {% block weather %}
 {% endblock weather %}
-  </table>
-</div>
 <form action="/weather" method = "POST">
   <p>Enter US Zip Code <input type="text" name="zip_code"/></p>
   <p>Or</p>

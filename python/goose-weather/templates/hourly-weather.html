@@ -1,5 +1,14 @@
 {% extends "weather.html" %}
 {% block weather %}
+<div style="overflow-x: auto;">
+  <table>
+    <tr>
+      <th>Time at Location</th>
+      <th>Temperature</th>
+      <th>% Precipitation</th>
+      <th>% Humidity</th>
+      <th>Forecast</th>
+    </tr>
   {% for period in forecasts %}
     <tr>
       <td style="width:15%">{{ format_time(period['startTime']) }}</td>
@@ -9,4 +18,6 @@
       <td style="width:10%">{{period['shortForecast']}}</td>
     </tr>
   {% endfor %}
+  </table>
+</div>
 {% endblock weather %}
