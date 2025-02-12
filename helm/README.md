@@ -9,4 +9,3 @@ The directories included will be as follows:
     - `charts` will be at the root of this directory and contain all custom helm charts
     - `defaut_values` will be at the root of this directory and contain all default values files from other helm charts as boiler plate when working on implementing outside helm charts
     - `values` will be at the root of this directory and contain configured values files for helm charts that have are being tested or used
-

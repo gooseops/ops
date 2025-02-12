@@ -4,5 +4,5 @@ data "doppler_secrets" "prod_secrets" {
 }
 
 data "cloudflare_zone" "gooseops" {
-  name = "gooseops.com"
+  zone_id = data.doppler_secrets.prod_secrets.map.CLOUDFLARE_GOOSEOPS_COM_ZONE_ID
 }
