@@ -26,7 +26,13 @@ variable "proxied" {
 }
 
 variable "comment" {
-  type = string
-  default = "Terraform Managed"
+  type        = string
+  default     = "Terraform Managed"
   description = "The comment to include with the DNS record"
+}
+
+variable "ttl" {
+  type        = number
+  default     = 1
+  description = "Time To Live (TTL) of the DNS record in seconds. Setting to 1 means 'automatic'."
 }

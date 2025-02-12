@@ -9,22 +9,22 @@
 #   sshkeys = data.doppler_secrets.prod_secrets.map.HOMELAB_PUB_KEY
 
 #   config = {
-#     name        = "test"
+#     name        = "test-babylon"
 #     desc        = <<-EOT
 #             test vm
 #         EOT
 #     vmid        = "110"
 #     target_node = "proxmox-01"
 #     clone       = "ubuntu-noble-amd64"
-#     cores       = 8
-#     memory      = 16384
+#     cores       = 4
+#     memory      = 8192
 #     sockets     = 1
 #     agent       = 1
 #     onboot      = true
 
 #     disk = {
 #       backup  = false
-#       storage = "local-zfs-sda"
+#       storage = "local-zfs-sdb"
 #       size    = 1000
 #       ssd     = true
 #     }
