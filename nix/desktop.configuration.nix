@@ -2,13 +2,33 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, callPackage, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
     ];
+
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+  };
+
+  hardware.graphics.extraPackages = with pkgs; [
+    rocmPackages.clr.icd
+    amdvlk
+  ];
+  
+  ## AMD vlk for 32-bit apps
+  hardware.graphics.extraPackages32 = with pkgs; [
+    driversi686Linux.amdvlk
+  ];
+
+  ## HIP
+  systemd.tmpfiles.rules = [
+    "L+    /opt/rocm/hip   -    -    -     -    ${pkgs.rocmPackages.clr}"
+  ];
 
   virtualisation.docker.enable = true;
   virtualisation.docker.rootless = {
@@ -44,7 +64,7 @@
       excludePackages = with pkgs; [ xterm ];
       displayManager.gdm.enable = true;
       desktopManager.gnome.enable = true;
-      # videoDrivers = [ "amdgpu" ];
+      videoDrivers = [ "amdgpu" ];
     };
     gnome.core-utilities.enable = false;
     printing.enable = true;
@@ -57,38 +77,27 @@
 
   }; 
 
-  # Enable i3 windowManager
-  # services.xserver = {
+
+  # Enable sound.
+  # hardware.pulseaudio.enable = true;
+  # OR
+  # services.pipewire = {
   #   enable = true;
-
-  #   desktopManager = {
-  #     xterm.enable = false;
-  #   };
-
-  #   displayManager = {
-  #     defaultSession = "none+i3";
-  #   };
-
-  #   windowManager.i3 = {
-  #     enable = true;
-  #     extraPackages = with pkgs; [
-  #       dmenu
-  #       i3status
-  #       i3lock
-  #       i3blocks
-  #     ];
-  #   }; 
+  #   pulse.enable = true;
   # };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.goose = {
     isNormalUser = true;
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
-    packages = with pkgs; [
-    ];
+    packages = with pkgs; [];
   };
   
-  environment.pathsToLink = [ "/libexec" ];
+
+  environment.variables.GSK_RENDERER = "gl";
+  
+  # List packages installed in system profile. To search, run:
+  # $ nix search wget
   environment.systemPackages = with pkgs; [
     audacity
     bitwarden-desktop
@@ -109,7 +118,9 @@
     gnomeExtensions.appindicator
     gnomeExtensions.dash-to-dock
     gnomeExtensions.gtile
+    handbrake
     lutris
+    makemkv
     slack
     spotify
     steam
@@ -120,13 +131,13 @@
     vlc
     vscode
     wget
+    xfce.xfburn
   ];
 
-  ## Exlude default gnome packages
+## Exlude default gnome packages
   environment.gnome.excludePackages = (with pkgs; [
     gnome-tour
   ]);
-
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
@@ -145,6 +156,7 @@
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
+
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
   # accidentally delete configuration.nix.
@@ -157,7 +169,8 @@
   # even if you've upgraded your system to a new NixOS release.
   #
   # This value does NOT affect the Nixpkgs version your packages and OS are pulled from,
-  # so changing it will NOT upgrade your system.
+  # so changing it will NOT upgrade your system - see https://nixos.org/manual/nixos/stable/#sec-upgrading for how
+  # to actually do that.
   #
   # This value being lower than the current NixOS release does NOT mean your system is
   # out of date, out of support, or vulnerable.
@@ -166,6 +179,6 @@
   # and migrated your data accordingly.
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
-  system.stateVersion = "23.11"; # Did you read the comment?
+  system.stateVersion = "24.05"; # Did you read the comment?
 
 }
