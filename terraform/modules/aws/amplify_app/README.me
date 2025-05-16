@@ -1,0 +1,89 @@
+# AWS Amplify App
+This is a terraform module for creating most things necessary for an aws amplify app connect to a github repo
+
+## ATTENTION!!
+This module has a manual step which includes configuring the DNS records in our DNS provider.  After running 
+`terraform apply` to create the resources for this module, the deployer will need to do the following
+
+- Login into AWS and view
+- Navigate to the Amplify App that is being deployed by terraform
+- Navigate to Hosting, then Custom domains
+- Here the domain that you are provisioning should reveal the DNS records that must be added to our DNS provider
+- Login into the DNS provider
+- Add the records from the Amplify App Custom Domains page.
+- Then the resources should create and complete correctly. 
+
+## Example usage
+The below files would be placed in the root/world module that is calling all submodules.
+
+`amplify.tf`
+```HCL
+module "frontend" {
+  source = "../../modules/aws/amplify_app/1.0.0"
+
+  name         = "example-app"
+  repo_owner   = "example-owner"
+  repo_name    = "example-repo"
+  branch       = "main"
+  github_token = "example-token"
+  iam_role     = example.arn
+  stage        = "PRODUCTION"
+  framework = "Next.js - SSR"
+  platform = "WEB_COMPUTE"
+  domain_name = "app.example.com"
+  environment_variables = {
+    "FOO" = "bar"
+  }
+
+  build_spec = <<-EOT
+    version: 1
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install -g pnpm
+            - pnpm install
+        build:
+          commands:
+            - pnpm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - .next/cache/**/*
+          - node_modules/**/*
+  EOT
+}
+```
+`providers.tf`
+```HCL
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-2"
+}
+```
+## Providers
+See `providers.tf` of each release for minimum provider version this module supports.
+
+- [aws](https://registry.terraform.io/providers/hashicorp/aws/latest)
+
+## Resources
+- `aws_amplify_app`: AWS Amplify Application
+- `aws_amplify_branch`: Branch configuration for git repo attached to Amplify App
+- `aws_amplify_domain_association`: Domain association and configuration for setting a custom domain for the Amplify App
+
+## Configuration
+See `variables.tf` in each release for variable configuration, defaults, and descriptions about the available configurations for this module.
+
+## Releases
+- 1.0.0: Initial Release

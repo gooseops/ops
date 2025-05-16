@@ -2,3 +2,5 @@
 - name: Configure Cloudflare Tunnel
   import_tasks: ubuntu-cloudflare-tunnel.yml
   when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - cloudflare-tunnel

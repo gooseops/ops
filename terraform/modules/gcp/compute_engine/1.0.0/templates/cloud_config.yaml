@@ -1,0 +1,11 @@
+#cloud-config
+
+system_info:
+    default_user:
+        name: ${admin_user}
+        gecos: ${admin_user}
+        groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video]
+        ssh_authorized_keys:
+        - ${admin_pubkey}
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash

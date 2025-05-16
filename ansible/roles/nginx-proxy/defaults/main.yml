@@ -1,0 +1,8 @@
+---
+ansible_distribution_release: "{{ ansible_distribution_release | default('noble') }}"
+ssl_enabled: false
+domain: example.com
+email: test@example.com
+app_port: 8080
+reject_non_dns_traffic: false
+enable_rate_limit: true

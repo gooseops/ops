@@ -1,0 +1,34 @@
+---
+- name: Stat swap file
+  stat:
+    path: /swapfile
+  register: swapfile_stat
+
+- name: Swap file
+  become: true
+  when: not swapfile_stat.stat.exists
+  block:
+    
+    - name: Swap file | Create swap file
+      command: fallocate -l {{ swapfile_size }} /swapfile
+
+    - name: Swap file | Set correct permissions on swap file
+      file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Swap file | Format the file as swap
+      command: mkswap /swapfile
+
+    - name: Swap file | Enable swap file
+      command: swapon /swapfile
+
+- name: Add swap file to fstab
+  become: true
+  lineinfile:
+    path: /etc/fstab
+    regexp: '^/swapfile'
+    line: '/swapfile none swap sw 0 0'
+    state: present
