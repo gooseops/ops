@@ -1,0 +1,33 @@
+
+# This role assumes Docker is already installed on the system
+---
+- name: Install Nextcloud
+  become: true
+  tags:
+    - nextcloud
+  block:
+    - name: Install Nextcloud | Create Nextcloud directory
+      ansible.builtin.file:
+        path: /opt/nextcloud-aio
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install Nextcloud | Install Docker Compose file
+      ansible.builtin.copy:
+        src: docker-compose.yml
+        dest: /opt/nextcloud-aio/docker-compose.yml
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install Nextcloud | Deploy Nextcloud AIO using Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: /opt/nextcloud-aio
+        state: present
+      register: output
+
+    - name: Install Nextcloud | Docker Compose output
+      ansible.builtin.debug:
+        var: output

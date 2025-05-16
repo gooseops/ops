@@ -1,0 +1,9 @@
+#cloud-config
+
+system_info:
+    default_user:
+        name: ${admin_user}
+        gecos: ${admin_user}
+        groups: [adm,rom, sudo, dip, lxd]
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash

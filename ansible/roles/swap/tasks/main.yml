@@ -1,0 +1,4 @@
+
+- name: Configure Swap file
+  import_tasks: ubuntu-swap.yml
+  when: ansible_facts['os_family'] == "Debian"

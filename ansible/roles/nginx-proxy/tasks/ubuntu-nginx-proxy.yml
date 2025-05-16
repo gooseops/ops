@@ -1,0 +1,105 @@
+---
+- name: Install NGINX and Certbot
+  become: true
+  block:
+    - name: Install NGINX and Certbot | Download NGINX signing key to /usr/share/keyrings
+      ansible.builtin.shell: |
+        curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+      args:
+        creates: /usr/share/keyrings/nginx-archive-keyring.gpg
+
+    - name: Install NGINX and Certbot | Add NGINX repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/ubuntu {{ ansible_distribution_release }} nginx"
+        state: present
+        filename: "nginx"
+
+    - name: Install NGINX and Certbot | Install apt packages
+      ansible.builtin.apt:
+        update_cache: yes
+        name: "{{ item }}"
+        state: latest
+      loop:
+        - nginx
+        - python3-certbot-nginx
+
+- name: Ensure NGINX service is running and enabled
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: yes
+  become: true
+
+- name: Obtain SSL certificates using Certbot
+  ansible.builtin.command: certbot certonly --nginx -d {{ domain }} --non-interactive --agree-tos --email {{ email }}
+  become: true
+  when: ssl_enabled
+
+- name: Create Nginx configuration directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /etc/nginx/sites-available
+    - /etc/nginx/sites-enabled
+
+- name: Modify Nginx configuration to include sites-enabled
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/nginx/nginx.conf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      include /etc/nginx/sites-enabled/*;
+    insertafter: "^http {"
+  notify: restart nginx
+
+- name: Configure NGINX as a reverse proxy
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/sites-available/{{ domain }}
+  become: true
+
+- name: Enable NGINX site configuration
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/{{ domain }}
+    dest: /etc/nginx/sites-enabled/{{ domain }}
+    state: link
+  become: true
+
+- name: Ensure Nginx version is not leaked
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    insertafter: "^http {"
+    line: '        server_tokens off;'
+  notify: restart nginx
+
+- name: Implement Rate Limit
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    insertafter: "^        server_tokens off;"
+    line: '        limit_req_zone $binary_remote_addr zone=one:10m rate=3r/s;'
+  notify: restart nginx
+
+- name: Remove default NGINX configuration if present
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  become: true
+
+- name: Test NGINX configuration
+  become: true
+  ansible.builtin.command: nginx -t
+  notify: restart nginx
+
+
+- name: Reload NGINX to apply SSL certificates
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+  become: true
