@@ -1,0 +1,36 @@
+---
+- name: Install dependencies
+  become: true
+  ansible.builtin.apt:
+    pkg:
+      - curl
+    state: present
+    update_cache: yes
+
+- name: Check for nvidia-smi
+  ansible.builtin.stat:
+    path: /usr/bin/nvidia-smi
+  register: nvidia_smi
+
+- name: Install Nvidia Drivers
+  become: true
+  when: not nvidia_smi.stat.exists
+  block:
+    - name: Install Nvidia Drivers | Server Drivers
+      ansible.builtin.command: ubuntu-drivers install --gpgpu
+    - name: Install Nvidia Drivers | Common Drivers
+      ansible.builtin.command: ubuntu-drivers install
+
+- name: Install Ollama
+  become: true
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://ollama.com/install.sh | sh
+    creates: /usr/local/bin/ollama
+
+- name: Ensure Ollama Daemon is Running
+  become: true
+  ansible.builtin.systemd:
+    name: ollama
+    daemon_reload: true
+    enabled: true
+    state: started
