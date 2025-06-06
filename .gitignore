@@ -169,3 +169,5 @@ cython_debug/
 ### Helm ###
 # Chart dependencies
 **/charts/*.tgz
+
+.DS_Store
