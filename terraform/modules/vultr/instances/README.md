@@ -2,40 +2,8 @@
 
 This is a terraform module for creating a Vultr instance.
 
-## Example usage
-
-`record.tf`
-
-```HCL
-module "example_instance" {
-  source = "../"
-
-  plan = var.plan
-  region = var.region
-  os_id = var.os_id
-  label = var.label
-  hostname = var.hostname
-  backups = var.backups
-  ssh_key_ids = var.ssh_key_ids
-}
-```
-
-`providers.tf`
-
-```HCL
-terraform {
-  required_providers {
-    vultr = {
-      source  = "vultr/vultr"
-      version = ">= 2.26.0"
-    }
-  }
-}
-
-provider "vultr" {
-  api_key = "<<token here>>"
-}
-```
+## Examples
+Please see the `example` directory in each module version for ways the module can be used in a worlds directory.
 
 ## Providers
 
@@ -45,7 +13,7 @@ See `providers.tf` of each release for minimum provider version this module supp
 
 ## Resources
 
--   `vultr_instance`
+-   `vultr_instance`: virtual server that you deploy on the Vultr cloud platform.
 
 ## Configuration
 
