@@ -25,8 +25,3 @@ variable "backups" {
   type        = string
   description = "Backups for the instance"
 }
-
-variable "vultr_api_key" {
-  type        = string
-  description = "API key for the Vultr account"
-}
