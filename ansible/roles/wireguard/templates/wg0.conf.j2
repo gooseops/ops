@@ -1,0 +1,23 @@
+[Interface]
+PrivateKey = {{ wg_prvkey }}
+Address = {{ wg_ip_cidr }}
+{% if is_server %}
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE;
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE;
+{% endif %}
+{% if wg_listen_port != "" %}
+ListenPort = {{ wg_listen_port }}
+{% endif %}
+SaveConfig = true
+
+{% for peer in wg_peers %}
+[Peer]
+PublicKey = {{ peer.pubkey }}
+AllowedIPs = {{ peer.allowed_ips }}
+{% if peer.endpoint != "" %}
+Endpoint = {{ peer.endpoint }}:{{ peer.port }}
+{% endif %}
+{% if peer.is_persistent %}
+PersistentKeepalive=30
+{% endif %}
+{% endfor %}
