@@ -1,0 +1,5 @@
+wg_prvkey: ""
+wg_local_ip: ""
+wg_listen_port: ""
+
+wg_peers: []

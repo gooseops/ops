@@ -1,12 +1,12 @@
 [Interface]
-PrivateKey = {{ wg_private_key }}
+PrivateKey = {{ wg_prv_key }}
 Address = {{ wg_local_ip }}/24
 ListenPort = {{ wg_listen_port }}
 SaveConfig = true
 
 {% for peer in wg_peers %}
 [[Peer]]
-PublicKey = {{ peer.public_key }}
+PublicKey = {{ peer.pubkey }}
 AllowedIPs = {{ peer.allowed_ips }}
 Endpoint = {{ peer.endpoint }}:{{ peer.port }}
 {% endfor %}

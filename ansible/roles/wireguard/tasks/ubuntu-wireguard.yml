@@ -1,5 +1,13 @@
 
+- name: Install Packages
+  become: true
+  ansible.builtin.apt:
+    pkg:
+      - wireguard
+    state: present
+
 - name: Ensure WireGuard directory exists
+  become: true
   ansible.builtin.file:
     path: /etc/wireguard
     state: directory
@@ -8,6 +16,7 @@
     mode: '0755'
 
 - name: Generate wg0.conf configuration file
+  become: true
   ansible.builtin.template:
     src: wg0.conf.j2
     dest: /etc/wireguard/wg0.conf
