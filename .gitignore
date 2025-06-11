@@ -170,4 +170,8 @@ cython_debug/
 # Chart dependencies
 **/charts/*.tgz
 
+# macOS
 .DS_Store
+
+# Personal notes
+**NOTES.md
