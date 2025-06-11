@@ -6,6 +6,14 @@
       - wireguard
     state: present
 
+- name: Ensure Wireguard Service is Stopped
+  become: true
+  ansible.builtin.systemd:
+    name: wg-quick@wg0
+    daemon_reload: true
+    enabled: true
+    state: stopped
+
 - name: Ensure WireGuard directory exists
   become: true
   ansible.builtin.file:
@@ -23,3 +31,11 @@
     owner: root
     group: root
     mode: '0600'
+
+- name: Ensure Wireguard Service is Started
+  become: true
+  ansible.builtin.systemd:
+    name: wg-quick@wg0
+    daemon_reload: true
+    enabled: true
+    state: started
