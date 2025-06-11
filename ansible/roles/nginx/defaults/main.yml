@@ -1,7 +1,0 @@
----
-domain: example.com
-email: test@gooseops.com
-app_port: "8080"
-reject_non_dns_traffic: false
-cert_pem: ""
-prvkey_pem: ""
