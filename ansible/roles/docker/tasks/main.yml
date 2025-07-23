@@ -1,4 +1,5 @@
 
-- name: Configure Seed Node
+- name: Install Docker
   import_tasks: ubuntu-docker.yml
-  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - docker

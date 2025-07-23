@@ -1,0 +1,13 @@
+
+is_server: true
+wg_prvkey: ""
+wg_ip_cidr: ""
+wg_listen_port: ""
+
+wg_peers:
+  - name: ""
+    pubkey: ""
+    allowed_ips: ""
+    endpoint: ""
+    port: ""
+    is_persistent: false
