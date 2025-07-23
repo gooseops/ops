@@ -175,3 +175,7 @@ cython_debug/
 
 # Personal notes
 **NOTES.md
+
+### Ansible ###
+# Local inventory files
+inventory/

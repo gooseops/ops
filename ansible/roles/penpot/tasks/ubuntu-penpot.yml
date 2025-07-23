@@ -1,0 +1,31 @@
+
+# This role assumes Docker is already installed on the system
+---
+- name: Install Penpot
+  become: true
+  block:
+    - name: Install Penpot | Create Penpot directory
+      ansible.builtin.file:
+        path: /opt/penpot
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install Penpot | Install Docker Compose file
+      ansible.builtin.copy:
+        src: docker-compose.yml
+        dest: /opt/penpot/docker-compose.yml
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install Penpot | Deploy Penpot AIO using Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: /opt/penpot
+        state: present
+      register: output
+
+    - name: Install Penpot | Docker Compose output
+      ansible.builtin.debug:
+        var: output
