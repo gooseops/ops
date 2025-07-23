@@ -1,13 +1,4 @@
 ---
-- name: Pause for apt-get lock
-  become: true
-  ansible.builtin.shell: 'fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1 | echo $?'
-  register: chk_aptget
-  until: chk_aptget.stdout == "0"
-  retries: 20
-  delay: 5
-  ignore_errors: true
-
 - name: Ensure required dependencies are installed
   become: true
   ansible.builtin.apt:

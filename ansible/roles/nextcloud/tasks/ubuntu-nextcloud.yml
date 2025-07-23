@@ -27,7 +27,3 @@
         project_src: /opt/nextcloud-aio
         state: present
       register: output
-
-    - name: Install Nextcloud | Docker Compose output
-      ansible.builtin.debug:
-        var: output

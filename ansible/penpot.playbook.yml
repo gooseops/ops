@@ -1,0 +1,6 @@
+---
+- hosts: penpot
+  roles:
+    - role: docker
+    - role: penpot
+    - role: cloudflare-tunnel
