@@ -1,0 +1,25 @@
+[Unit]
+Description=Service for Reth Execution Client
+Requires=network.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ bin_inst_path }}/reth node \
+            --chain={{ network }} \
+            --datadir={{ reth_data_dir }} \
+            --http \
+            --http.addr=0.0.0.0 \
+            --http.api="debug,eth,net,web3,rpc" \
+            --http.corsdomain "*" \
+            --ws \
+            --ws.addr=0.0.0.0 \
+            --ws.origins=* \
+            --ws.api="debug,eth,net,web3,rpc" \
+            --authrpc.jwtsecret={{ reth_data_dir }}/jwtsecret \
+            --full
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+bin_inst_path: "/usr/local/bin"
+lighthouse_version: "v7.1.0"
+lighthouse_data_dir: "/var/lib/lighthouse"
+reth_version: "v1.5.0"
+reth_data_dir: "/var/lib/reth"
+network: "mainnet"
