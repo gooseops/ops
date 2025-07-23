@@ -1,0 +1,11 @@
+---
+- hosts: nextcloud
+  roles:
+    - role: docker
+    - role: nextcloud
+    ## Todo: switch out tunnel role for nginx or other networking solution for compatibility
+    - role: cloudflare-tunnel
+
+## After the ansible playbook runs and some containers have been set, we need these commands for adminstrative purposes. Might be able to run before initial setup
+## docker exec --user www-data -it nextcloud-aio-nextcloud php occ maintenance:repair --include-expensive
+## docker exec --user www-data -it nextcloud-aio-nextcloud php occ config:system:set default_phone_region --value="US"

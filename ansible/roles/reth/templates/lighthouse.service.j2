@@ -1,0 +1,20 @@
+[Unit]
+Description=Service for Lighthouse Consensus Client
+Requires=network.target reth.service
+After=network.target reth.service
+
+[Service]
+Type=simple
+ExecStart={{ bin_inst_path }}/lighthouse bn \
+            --checkpoint-sync-url https://hoodi-checkpoint-sync.stakely.io \
+            --datadir {{ lighthouse_data_dir }} \
+            --network {{ network }} \
+            --execution-endpoints http://127.0.0.1:8551 \
+            --execution-jwt "{{ reth_data_dir }}/jwtsecret" \
+            --disable-deposit-contract-sync \
+            --disable-light-client-server
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
