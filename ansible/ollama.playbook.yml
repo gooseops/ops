@@ -1,4 +1,7 @@
 ---
-- hosts: all
+- hosts: llm
   roles:
+    - role: docker
     - role: ollama
+    - role: cloudflare-tunnel
+    - role: swap
