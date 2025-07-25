@@ -1,0 +1,39 @@
+---
+- name: ubuntu-operator | apt packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - openssl
+      - curl
+      - tar
+    state: present
+    update-cache: true
+  tags:
+    - operator
+    - apt-packages
+
+- name: operator
+  vars:
+    systemd_svc_name: drosera-operator
+  block:
+    - name: Download and extract tarball
+      become: true
+      ansible.builtin.unarchive:
+        remote_src: true
+        src: "https://github.com/drosera-network/releases/releases/download/{{ app_ver }}/{{ systemd_svc_name }}-{{ app_ver }}-x86_64-unknown-linux-gnu.tar.gz"
+        dest: "{{ bin_inst_path }}"
+      
+    - name: Create systemd service file from template
+      become: true
+      ansible.builtin.template:
+        src: "{{ systemd_svc_name }}.service.j2"
+        dest: "/etc/systemd/system/{{ systemd_svc_name }}.service"
+        mode: '0644'
+
+    - name: Enable and start the service
+      become: true
+      ansible.builtin.systemd_service:
+        name: "{{ systemd_svc_name }}"
+        daemon_reload: true
+        enabled: true
+        state: restarted
