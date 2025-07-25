@@ -1,0 +1,31 @@
+[Unit]
+Description=Service for Drosera Operator
+Requires=network.target
+After=network.target
+
+[Service]
+Type=simple
+
+Environment="DRO__BLOCK_POLLING_INTERVAL_MS={{ block_polling_interval_ms }}"
+Environment="DRO__DEV_MODE={{ dev_mode }}"
+Environment="DRO__DB_FILE_PATH={{ db_file_path }}"
+Environment="DRO__DISABLE_DNR_CONFIRMATION=false"
+Environment="DRO__DROSERA_ADDRESS={{ drosera_address }}"
+Environment="DRO__LISTEN_ADDRESS={{ listen_address }}"
+Environment="DRO__ETH__CHAIN_ID={{ eth_chain_id }}"
+Environment="DRO__ETH__RPC_URL={{ eth_rpc_url }}"
+Environment="DRO__ETH__BACKUP_RPC_URL={{ eth_backup_rpc_url }}"
+Environment="DRO__ETH__PRIVATE_KEY={{ eth_private_key }}"
+Environment="DRO__NETWORK__P2P_PORT={{ network_p2p_port }}"
+Environment="DRO__NETWORK__EXTERNAL_P2P_ADDRESS={{ network_external_p2p_address }}"
+Environment="DRO__NETWORK__IDLE_CONNECTION_TIMEOUT={{ network_idle_connection_timeout }}"
+Environment="DRO__SERVER__PORT={{ server_port }}"
+Environment="DRO__SERVER__RATE_LIMIT_BY_IP={{ server_rate_limit_by_ip }}"
+Environment="DRO__INSTRUMENTATION__LOG_LEVEL={{ log_level }}"
+
+ExecStart={{ bin_inst_path }}/{{ systemd_svc_name }} node
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
