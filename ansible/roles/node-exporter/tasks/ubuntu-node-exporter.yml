@@ -1,0 +1,42 @@
+---
+- name: ubuntu-node-exporter | apt packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - openssl
+      - curl
+      - tar
+    state: present
+    update-cache: true
+  tags:
+    - node-exporter
+    - apt-packages
+
+- name: Download and extract tarball
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    dest: "/tmp"
+
+- name: Copy binary to bin directory
+  become: true
+  ansible.builtin.copy:
+    src: /tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter
+    dest: "{{ node_exporter_binary_install_dir }}"
+    remote_src: true
+    mode: 0755
+
+- name: Create systemd service file from template
+  become: true
+  ansible.builtin.template:
+    src: "{{ node_exporter_systemd_svc_name }}.service.j2"
+    dest: "/etc/systemd/system/{{ node_exporter_systemd_svc_name }}.service"
+    mode: '0644'
+
+- name: Enable and start the service
+  become: true
+  ansible.builtin.systemd_service:
+    name: "{{ node_exporter_systemd_svc_name }}"
+    daemon_reload: true
+    enabled: true
+    state: restarted
