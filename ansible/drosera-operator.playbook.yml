@@ -2,5 +2,3 @@
 - hosts: operators
   roles:
     - role: drosera-operator
-
-# doppler run --command 'ansible-playbook --private-key ~/.ssh/homelab -u administrator -i "192.168.1.102," goose-operator.playbook.yml'
