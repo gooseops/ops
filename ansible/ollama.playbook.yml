@@ -1,6 +1,7 @@
 ---
 - hosts: llm
   roles:
+    - role: node-exporter
     - role: docker
     - role: ollama
     - role: cloudflare-tunnel

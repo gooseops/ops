@@ -1,6 +1,7 @@
 ---
 - hosts: vaultwarden
   roles:
+    - role: node-exporter
     - role: docker
     - role: vaultwarden
     - role: nginx-proxy

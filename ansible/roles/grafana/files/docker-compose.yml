@@ -1,0 +1,39 @@
+services:
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    network_mode: host
+    restart: unless-stopped
+    # environment:
+    #  - GF_SERVER_ROOT_URL=http://my.grafana.server/
+    #  - GF_PLUGINS_PREINSTALL=grafana-clock-panel
+    # ports:
+    #  - '3000:3000'
+    volumes:
+      - 'grafana_storage:/var/lib/grafana'
+      - type: bind
+        source: ./datasource_prometheus.yaml
+        target: /etc/grafana/provisioning/datasources/datasource_prometheus.yaml
+      - type: bind
+        source: ./dashboard_config.yaml
+        target: /etc/grafana/provisioning/dashboards/dashboard_config.yaml
+      - type: bind
+        source: ./dashboard_node_exporter.json
+        target: /etc/grafana/provisioning/dashboards/dashboard_node_exporter.json
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    network_mode: host
+    restart: unless-stopped
+    # ports:
+    #  - '9090:9090'
+    volumes:
+      - prometheus-data:/prometheus
+      - type: bind
+        source: ./prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+
+volumes:
+  grafana_storage: {}
+  prometheus-data: {}

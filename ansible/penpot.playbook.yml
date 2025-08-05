@@ -1,7 +1,8 @@
 ---
 - hosts: penpot
   roles:
+    - role: node-exporter
     - role: docker
     - role: penpot
     - role: cloudflare-tunnel
-    - role: node-exporter
+    

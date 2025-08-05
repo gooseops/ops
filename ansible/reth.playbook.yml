@@ -1,5 +1,6 @@
 ---
 - hosts: reth
   roles:
+    - role: node-exporter
     - role: reth
     - role: swap
