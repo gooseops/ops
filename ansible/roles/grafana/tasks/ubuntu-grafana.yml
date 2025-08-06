@@ -30,8 +30,8 @@
     mode: '0644'
 
 - name: Install Node Exporter Dashboard File
-  ansible.builtin.copy:
-    src: dashboard_node_exporter.json
+  ansible.builtin.get_url:
+    url: https://grafana.com/api/dashboards/1860/revisions/41/download
     dest: /home/{{ ansible_user }}/monitor/dashboard_node_exporter.json
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
