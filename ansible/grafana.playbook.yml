@@ -1,0 +1,6 @@
+---
+- hosts: grafana
+  roles:
+    - role: docker
+    - role: grafana
+    - role: swap

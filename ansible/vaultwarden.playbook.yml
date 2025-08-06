@@ -1,9 +1,10 @@
 ---
-- hosts: all
+- hosts: vaultwarden
   roles:
+    - role: node-exporter
     - role: docker
     - role: vaultwarden
-    - role: nginx
+    - role: nginx-proxy
       vars:
         domain:                 "vw.gooseops.local"
         ip:                     "{{ lookup('ansible.builtin.env', 'VW_IP')}}"

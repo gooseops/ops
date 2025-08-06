@@ -1,0 +1,60 @@
+---
+- name: Ensure Monitor Directory Exists
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/monitor
+    state: "directory"
+    mode: "0755"
+
+- name: Install Docker Compose File
+  ansible.builtin.copy:
+    src: docker-compose.yml
+    dest: /home/{{ ansible_user }}/monitor/docker-compose.yml
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Install Grafana Datasources File
+  ansible.builtin.copy:
+    src: datasource_prometheus.yaml
+    dest: /home/{{ ansible_user }}/monitor/datasource_prometheus.yaml
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Install Dashboard Configuration File
+  ansible.builtin.copy:
+    src: dashboard_config.yaml
+    dest: /home/{{ ansible_user }}/monitor/dashboard_config.yaml
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Install Node Exporter Dashboard File
+  ansible.builtin.get_url:
+    url: https://grafana.com/api/dashboards/1860/revisions/41/download
+    dest: /home/{{ ansible_user }}/monitor/dashboard_node_exporter.json
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Install Prometheus File
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: /home/{{ ansible_user }}/monitor/prometheus.yml
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: Stop Docker Compose Service
+  community.docker.docker_compose_v2:
+    project_src: /home/{{ ansible_user }}/monitor
+    pull: always
+    state: stopped
+    remove_orphans: true
+
+- name: Start Docker Compose Service
+  community.docker.docker_compose_v2:
+    project_src: /home/{{ ansible_user }}/monitor
+    pull: always
+    state: present
+    remove_orphans: true
