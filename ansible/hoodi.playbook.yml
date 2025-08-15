@@ -1,5 +1,5 @@
 ---
-- hosts: reth
+- hosts: hoodi
   roles:
     - role: node-exporter
     - role: reth

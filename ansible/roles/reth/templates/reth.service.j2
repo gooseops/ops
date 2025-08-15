@@ -16,6 +16,7 @@ ExecStart={{ bin_inst_path }}/reth node \
             --ws.addr=0.0.0.0 \
             --ws.origins=* \
             --ws.api="debug,eth,net,web3,rpc" \
+            --metrics {{ ansible_host }}:9001 \
             --authrpc.jwtsecret={{ reth_data_dir }}/jwtsecret \
             --full
 

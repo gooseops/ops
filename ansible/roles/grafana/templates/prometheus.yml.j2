@@ -6,3 +6,10 @@ scrape_configs:
 {% for host in groups['all'] %}
         - "{{ host }}:9100"
 {% endfor %}
+  - job_name: 'reth_hoodi_metrics'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+{% for host in groups['hoodi'] %}
+        - "{{ host }}:9001"
+{% endfor %}
