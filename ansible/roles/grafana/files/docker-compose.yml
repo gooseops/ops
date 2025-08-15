@@ -20,6 +20,9 @@ services:
       - type: bind
         source: ./dashboard_node_exporter.json
         target: /etc/grafana/provisioning/dashboards/dashboard_node_exporter.json
+      - type: bind
+        source: ./dashboard_reth_metrics.json
+        target: /etc/grafana/provisioning/dashboards/dashboard_reth_metrics.json
 
   prometheus:
     image: prom/prometheus:latest
