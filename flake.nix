@@ -10,10 +10,10 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        tools = [
-          pkgs.ansible
-          pkgs.awscli2
-          pkgs.google-cloud-sdk
+        tools = with pkgs; [
+          ansible
+          awscli2
+          google-cloud-sdk
         ];
       in {
         devShells.default = pkgs.mkShell {
