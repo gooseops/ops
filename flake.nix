@@ -1,4 +1,3 @@
-# flake.nix
 {
   description = "Dev environment for core tech";
 
