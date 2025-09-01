@@ -45,6 +45,14 @@
     group: "{{ ansible_user }}"
     mode: '0644'
 
+- name: Install Lighthouse Metrics Dashboard File
+  ansible.builtin.copy:
+    src: dashboard_lighthouse_metrics.json
+    dest: /home/{{ ansible_user }}/monitor/dashboard_lighthouse_metrics.json
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
 - name: Install Prometheus File
   ansible.builtin.template:
     src: prometheus.yml.j2

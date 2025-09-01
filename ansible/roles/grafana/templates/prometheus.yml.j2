@@ -13,3 +13,10 @@ scrape_configs:
 {% for host in groups['hoodi'] %}
         - "{{ host }}:9001"
 {% endfor %}
+  - job_name: 'lighthouse_hoodi_metrics'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+{% for host in groups['hoodi'] %}
+        - "{{ host }}:5064"
+{% endfor %}
