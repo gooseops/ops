@@ -4,12 +4,13 @@
     - role: node-exporter
     - role: docker
     - role: vaultwarden
-    - role: nginx-proxy
-      vars:
-        domain:                 "vw.gooseops.local"
-        ip:                     "{{ lookup('ansible.builtin.env', 'VW_IP')}}"
-        email:                  "{{ lookup('ansible.builtin.env', 'TLS_EMAIL') }}"
-        app_port:               "8080"
-        reject_non_dns_traffic: false
-        cert_pem:               "{{ lookup('ansible.builtin.env', 'VW_TLS_CERT') }}"
-        prvkey_pem:             "{{ lookup('ansible.builtin.env', 'VW_TLS_PRVKEY') }}"
+## Todo: fix nginx role for local certs
+    # - role: nginx-proxy
+    #   vars:
+    #     domain:                 "vw.gooseops.local"
+    #     ip:                     "{{ lookup('ansible.builtin.env', 'VW_IP')}}"
+    #     email:                  "{{ lookup('ansible.builtin.env', 'TLS_EMAIL') }}"
+    #     app_port:               "8080"
+    #     reject_non_dns_traffic: false
+    #     cert_pem:               "{{ lookup('ansible.builtin.env', 'VW_TLS_CERT') }}"
+    #     prvkey_pem:             "{{ lookup('ansible.builtin.env', 'VW_TLS_PRVKEY') }}"
