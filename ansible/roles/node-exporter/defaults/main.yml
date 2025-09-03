@@ -27,5 +27,3 @@ node_exporter_systemd_svc_name: "node-exporter"
 node_exporter_binary_install_dir: "/usr/local/bin"
 
 node_exporter_config_dir: "/etc/node_exporter"
-# Local path to stash the archive and its extraction
-node_exporter_local_cache_path: "/tmp/node_exporter-{{ ansible_facts['system'] | lower }}-{{ _node_exporter_go_ansible_arch }}/{{ node_exporter_version }}"

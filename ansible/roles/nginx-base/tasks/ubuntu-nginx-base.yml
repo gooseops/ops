@@ -1,0 +1,68 @@
+---
+- name: Install needed packages
+  become: true
+  ansible.builtin.apt:
+    update_cache: yes
+    state: latest
+    pkg:
+      - curl
+      - gnupg2 
+      - ca-certificates
+      - lsb-release
+      - ubuntu-keyring
+
+- name: Install NGINX and Certbot
+  become: true
+  block:
+    - name: Install NGINX and Certbot | Download NGINX signing key to /usr/share/keyrings
+      ansible.builtin.shell: |
+        curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+      args:
+        creates: /usr/share/keyrings/nginx-archive-keyring.gpg
+
+    - name: Install NGINX and Certbot | Add NGINX repository
+      ansible.builtin.shell: |
+        echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/ubuntu $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
+      args:
+        creates: /etc/apt/sources.list.d/nginx.list
+
+    - name: Install NGINX and Certbot | Install apt packages
+      ansible.builtin.apt:
+        update_cache: yes
+        state: latest
+        pkg:
+          - nginx
+          - python3-certbot-nginx
+
+- name: Ensure NGINX service is running and enabled
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: yes
+  become: true
+
+- name: Create Nginx configuration directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /etc/nginx/sites-available
+    - /etc/nginx/sites-enabled
+
+- name: Configure Nginx
+  become: true
+  ansible.builtin.copy:
+    src: nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Nginx 
+
+- name: Test NGINX configuration
+  become: true
+  ansible.builtin.command: nginx -t

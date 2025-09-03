@@ -1,0 +1,6 @@
+---
+- hosts: gooseops_fe
+  roles:
+    - role: node-exporter
+    - role: nginx-base
+    - role: cloudflare-tunnel
