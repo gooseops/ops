@@ -8,7 +8,56 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      ./wireguard.nix
+      # ./tailscale.nix
     ];
+
+  networking.networkmanager.enable = true;
+
+  # Enable OpenGL
+  hardware.graphics = {
+    enable = true;
+  };
+
+  hardware.nvidia = {
+
+    # Modesetting is required.
+    modesetting.enable = true;
+
+    # Nvidia power management. Experimental, and can cause sleep/suspend to fail.
+    # Enable this if you have graphical corruption issues or application crashes after waking
+    # up from sleep. This fixes it by saving the entire VRAM memory to /tmp/ instead 
+    # of just the bare essentials.
+    powerManagement.enable = false;
+
+    # Fine-grained power management. Turns off GPU when not in use.
+    # Experimental and only works on modern Nvidia GPUs (Turing or newer).
+    powerManagement.finegrained = false;
+
+    # Use the NVidia open source kernel module (not to be confused with the
+    # independent third-party "nouveau" open source driver).
+    # Support is limited to the Turing and later architectures. Full list of 
+    # supported GPUs is at: 
+    # https://github.com/NVIDIA/open-gpu-kernel-modules#compatible-gpus 
+    # Only available from driver 515.43.04+
+    open = false;
+
+    # Enable the Nvidia settings menu,
+	# accessible via `nvidia-settings`.
+    nvidiaSettings = true;
+
+    # Optionally, you may need to select the appropriate driver version for your specific GPU.
+    package = config.boot.kernelPackages.nvidiaPackages.latest;
+  };
+
+  hardware.nvidia.prime = {
+    sync.enable = true;
+
+    # Make sure to use the correct Bus ID values for your system!
+    nvidiaBusId = "PCI:01:00:0";
+    amdgpuBusId = "PCI:05:00:0";
+  };
+
 
   virtualisation.docker.enable = true;
   virtualisation.docker.rootless = {
@@ -29,6 +78,8 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  boot.kernelParams = [ "psmouse.synaptics_intertouch=0" ];
+
   # networking.hostName = "nixos"; # Define your hostname.
   # Pick only one of the below networking options.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
@@ -44,9 +95,9 @@
       excludePackages = with pkgs; [ xterm ];
       displayManager.gdm.enable = true;
       desktopManager.gnome.enable = true;
-      # videoDrivers = [ "amdgpu" ];
+      videoDrivers = [ "nvidia" ];
     };
-    gnome.core-utilities.enable = false;
+    gnome.core-apps.enable = false;
     printing.enable = true;
     flatpak.enable = false;
     avahi = {
@@ -54,7 +105,6 @@
       nssmdns4 = true;
       openFirewall = true;
     };
-
   }; 
 
   # Enable i3 windowManager
@@ -87,39 +137,63 @@
     packages = with pkgs; [
     ];
   };
-  
+  programs.gnupg.agent = {
+    enable = true;
+    enableSSHSupport = true;
+    pinentryPackage = pkgs.pinentry-tty;
+  };
+ 
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true; # Open ports in the firewall for Steam Remote Play
+    dedicatedServer.openFirewall = true; # Open ports in the firewall for Source Dedicated Server
+    localNetworkGameTransfers.openFirewall = true; # Open ports in the firewall for Steam Local Network Game Transfers
+  };
+ 
   environment.pathsToLink = [ "/libexec" ];
   environment.systemPackages = with pkgs; [
     audacity
     bitwarden-desktop
     brave
     clinfo
+    dig
     discord
     docker
+    firefox
     gimp
     git
-    gnome-calculator
-    gnome-disk-utility
-    gnome-terminal
-    gnome-system-monitor
-    gnome-tweaks
-    heroic
-    nautilus
-    simple-scan
     gnomeExtensions.appindicator
     gnomeExtensions.dash-to-dock
     gnomeExtensions.gtile
+    gnome-calculator
+    gnome-disk-utility
+    gnome-network-displays
+    gnome-terminal
+    gnome-system-monitor
+    gnome-tweaks
+    gnucash
+    gnupg
+    heroic
+    lshw
+    nautilus
     lutris
+    ollama
+    parsec-bin
+    pinentry-tty
+    simple-scan
     slack
     spotify
     steam
+    tailscale
     telegram-desktop
     unzip
     vim
-    virtiofsd
     vlc
     vscode
     wget
+    wireshark
+    zed-editor
+    zint
   ];
 
   ## Exlude default gnome packages
@@ -144,7 +218,7 @@
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
+  networking.firewall.enable = false;
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
   # accidentally delete configuration.nix.
