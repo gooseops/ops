@@ -2,13 +2,18 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+  ];
 
   hardware.graphics = {
     enable = true;
@@ -19,7 +24,7 @@
     rocmPackages.clr.icd
     amdvlk
   ];
-  
+
   ## AMD vlk for 32-bit apps
   hardware.graphics.extraPackages32 = with pkgs; [
     driversi686Linux.amdvlk
@@ -75,8 +80,7 @@
       openFirewall = true;
     };
 
-  }; 
-
+  };
 
   # Enable sound.
   # hardware.pulseaudio.enable = true;
@@ -90,12 +94,11 @@
   users.users.goose = {
     isNormalUser = true;
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
-    packages = with pkgs; [];
+    packages = with pkgs; [ ];
   };
-  
 
   environment.variables.GSK_RENDERER = "gl";
-  
+
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -134,10 +137,13 @@
     xfce.xfburn
   ];
 
-## Exlude default gnome packages
-  environment.gnome.excludePackages = (with pkgs; [
-    gnome-tour
-  ]);
+  ## Exlude default gnome packages
+  environment.gnome.excludePackages = (
+    with pkgs;
+    [
+      gnome-tour
+    ]
+  );
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
