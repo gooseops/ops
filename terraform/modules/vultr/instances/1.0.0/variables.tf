@@ -20,8 +20,3 @@ variable "hostname" {
   type        = string
   description = "Hostname of the instance"
 }
-
-variable "backups" {
-  type        = string
-  description = "Backups for the instance"
-}
