@@ -5,7 +5,7 @@
     name:
       - curl
     state: present
-    update_cache: yes
+    update_cache: true
   tags:
     - cloudflare-tunnel
     - apt-packages
@@ -17,7 +17,7 @@
       ansible.builtin.file:
         path: /usr/share/keyrings
         state: directory
-        mode: '0755'
+        mode: "0755"
     - name: Install cloudflared | Download cloudflared gpg key
       ansible.builtin.shell:
         cmd: curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
@@ -31,7 +31,7 @@
         name:
           - cloudflared
         state: present
-        update_cache: yes
+        update_cache: true
 
 - name: Configure cloudflared tunnel
   become: true
@@ -40,7 +40,7 @@
       ansible.builtin.file:
         path: /etc/cloudflared
         state: directory
-        mode: '0755'
+        mode: "0755"
     - name: Configure cloudflared tunnel | Add config.yaml file
       ansible.builtin.template:
         src: config.yml.j2
@@ -60,5 +60,5 @@
     - name: Create cloudflared service | Enable and run cloudflared.service
       ansible.builtin.systemd:
         name: cloudflared
-        enabled: yes
+        enabled: true
         state: started

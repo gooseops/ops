@@ -1,4 +1,4 @@
-
+---
 - name: Install Packages
   become: true
   ansible.builtin.apt:
@@ -21,7 +21,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Generate wg0.conf configuration file
   become: true
@@ -30,7 +30,7 @@
     dest: /etc/wireguard/wg0.conf
     owner: root
     group: root
-    mode: '0600'
+    mode: "0600"
 
 - name: Ensure Wireguard Service is Started
   become: true
@@ -43,8 +43,8 @@
 - name: Enable IPv4 Forwarding
   become: true
   when: is_server
-  ansible.builtin.sysctl:
+  ansible.posix.sysctl:
     name: net.ipv4.ip_forward
     value: 1
     state: present
-    reload: yes
+    reload: true

@@ -14,7 +14,7 @@
       - tar
       - unzip
     state: present
-    update_cache: yes
+    update_cache: true
 
 ## Todo only run if Reth version changed
 - name: Install Reth
@@ -33,7 +33,6 @@
     src: "https://github.com/sigp/lighthouse/releases/download/{{ lighthouse_version }}/lighthouse-{{ lighthouse_version }}-x86_64-unknown-linux-gnu.tar.gz"
     dest: "{{ bin_inst_path }}"
 
-
 - name: Add App bin path to PATH variable
   ansible.builtin.blockinfile:
     path: /home/{{ ansible_user }}/.bashrc
@@ -44,21 +43,21 @@
 
 - name: Create data directory for Lighthouse
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ lighthouse_data_dir }}"
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Create data directory for Reth
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ reth_data_dir }}"
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Store jwt secret in Reth datadir
   become: true
@@ -81,15 +80,15 @@
 - name: Restart reth
   become: true
   ansible.builtin.systemd:
-    daemon_reload: yes
+    daemon_reload: true
     name: reth
-    enabled: yes
+    enabled: true
     state: restarted
 
 - name: Restart Lighthouse
   become: true
   ansible.builtin.systemd:
-    daemon_reload: yes
+    daemon_reload: true
     name: lighthouse
-    enabled: yes
+    enabled: true
     state: restarted

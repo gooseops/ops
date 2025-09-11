@@ -1,3 +1,4 @@
+---
 services:
   grafana:
     image: grafana/grafana-enterprise
@@ -5,7 +6,7 @@ services:
     network_mode: host
     restart: unless-stopped
     volumes:
-      - 'grafana_storage:/var/lib/grafana'
+      - "grafana_storage:/var/lib/grafana"
       - type: bind
         source: ./datasource_prometheus.yaml
         target: /etc/grafana/provisioning/datasources/datasource_prometheus.yaml

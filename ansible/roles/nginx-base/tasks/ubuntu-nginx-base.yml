@@ -2,11 +2,11 @@
 - name: Install needed packages
   become: true
   ansible.builtin.apt:
-    update_cache: yes
+    update_cache: true
     state: latest
     pkg:
       - curl
-      - gnupg2 
+      - gnupg2
       - ca-certificates
       - lsb-release
       - ubuntu-keyring
@@ -28,7 +28,7 @@
 
     - name: Install NGINX and Certbot | Install apt packages
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
         state: latest
         pkg:
           - nginx
@@ -38,7 +38,7 @@
   ansible.builtin.service:
     name: nginx
     state: started
-    enabled: yes
+    enabled: true
   become: true
 
 - name: Create Nginx configuration directories
@@ -48,7 +48,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
   loop:
     - /etc/nginx/sites-available
     - /etc/nginx/sites-enabled
@@ -60,8 +60,8 @@
     dest: /etc/nginx/nginx.conf
     owner: root
     group: root
-    mode: '0644'
-  notify: Restart Nginx 
+    mode: "0644"
+  notify: Restart Nginx
 
 - name: Test NGINX configuration
   become: true

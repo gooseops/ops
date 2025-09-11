@@ -1,5 +1,5 @@
-
-- name: run vaultwarden container
+---
+- name: Run vaultwarden container
   community.docker.docker_container:
     name: vaultwarden
     image: vaultwarden/server:latest

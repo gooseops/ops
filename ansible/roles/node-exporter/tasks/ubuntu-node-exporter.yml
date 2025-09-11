@@ -1,5 +1,5 @@
 ---
-- name: ubuntu-node-exporter | apt packages
+- name: ubuntu-node-exporter | Apt packages
   become: true
   ansible.builtin.apt:
     name:
@@ -24,14 +24,14 @@
     src: /tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter
     dest: "{{ node_exporter_binary_install_dir }}"
     remote_src: true
-    mode: 0755
+    mode: "0755"
 
 - name: Create systemd service file from template
   become: true
   ansible.builtin.template:
     src: "{{ node_exporter_systemd_svc_name }}.service.j2"
     dest: "/etc/systemd/system/{{ node_exporter_systemd_svc_name }}.service"
-    mode: '0644'
+    mode: "0644"
 
 - name: Enable and start the service
   become: true

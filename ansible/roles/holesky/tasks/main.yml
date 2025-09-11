@@ -1,6 +1,6 @@
-
+---
 - name: Configure Holesky
-  import_tasks: ubuntu-holesky.yml
+  ansible.builtin.import_tasks: ubuntu-holesky.yml
   when: ansible_facts['os_family'] == "Debian"
   tags:
     - holesky

@@ -1,7 +1,7 @@
 ---
 - name: Pause for apt-get lock
   become: true
-  ansible.builtin.shell: 'fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1 | echo $?'
+  ansible.builtin.shell: "fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1 | echo $?"
   register: chk_aptget
   until: chk_aptget.stdout == "0"
   retries: 20
@@ -23,7 +23,7 @@
       - tar
       - unzip
     state: present
-    update_cache: yes
+    update_cache: true
   tags:
     - holesky
     - apt-packages
@@ -39,18 +39,18 @@
         list_files: true
         dest: /tmp
       register: archive_files
-    
+
     - name: Install Geth | Set Binary tmp path
       ansible.builtin.set_fact:
         binary: "{{ archive_files.files | select('match', '.*geth$') | first }}"
-    
+
     - name: Install Geth | Copy binary to bin path
       become: true
       ansible.builtin.copy:
         remote_src: true
         src: /tmp/{{ binary }}
         dest: "{{ bin_inst_path }}"
-        mode: 0755
+        mode: "0755"
 
 ## Todo only run if lighthouse version changed
 - name: Download and extract Lighthouse Consensus Client
@@ -59,7 +59,6 @@
     remote_src: true
     src: "https://github.com/sigp/lighthouse/releases/download/{{ lighthouse_version }}/lighthouse-{{ lighthouse_version }}-x86_64-unknown-linux-gnu.tar.gz"
     dest: "{{ bin_inst_path }}"
-
 
 - name: Add App bin path to PATH variable
   ansible.builtin.blockinfile:
@@ -71,21 +70,21 @@
 
 - name: Create data directory for Lighthouse
   become: true
-  file:
+  ansible.builtin.file:
     path: /var/lib/lighthouse
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Create data directory for Geth
   become: true
-  file:
+  ansible.builtin.file:
     path: /var/lib/geth
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Store jwt secret in Geth datadir
   become: true
@@ -105,12 +104,12 @@
     src: holesky-service.j2
     dest: /etc/systemd/system/holesky.service
 
-- name: restart holesky
+- name: Restart holesky
   become: true
   ansible.builtin.systemd:
-    daemon_reload: yes
+    daemon_reload: true
     name: holesky
-    enabled: yes
+    enabled: true
     state: restarted
 
 # - name: Reload systemd and start Lighthouse

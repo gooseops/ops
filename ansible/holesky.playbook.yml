@@ -3,7 +3,7 @@
   roles:
     - role: holesky
       vars:
-        holesky_jwt_secret:  "{{ lookup('ansible.builtin.env', 'HOLESKY_JWT_SECRET') }}"
+        holesky_jwt_secret: "{{ lookup('ansible.builtin.env', 'HOLESKY_JWT_SECRET') }}"
         checkpoint_sync_url: "{{ lookup('ansible.builtin.env', 'HOLESKY_CHECKPOINT_SYNC_URL') }}"
 
     - role: swap

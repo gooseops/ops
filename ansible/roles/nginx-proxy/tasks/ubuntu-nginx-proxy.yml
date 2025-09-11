@@ -23,7 +23,7 @@
   ansible.builtin.lineinfile:
     path: /etc/nginx/nginx.conf
     insertafter: "^        server_tokens off;"
-    line: '        limit_req_zone $binary_remote_addr zone=one:10m rate=3r/s;'
+    line: "        limit_req_zone $binary_remote_addr zone=one:10m rate=3r/s;"
   notify: Restart Nginx
 
 - name: Remove default NGINX configuration if present
