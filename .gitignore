@@ -1,3 +1,11 @@
+### Ansible ###
+# Local inventory files
+inventory*
+
+inventory/
+.ansible/
+ansible.cfg
+
 ### Terraform ###
 # Local .terraform directories
 **/.terraform/*
@@ -178,8 +186,3 @@ cython_debug/
 
 # Personal notes
 **NOTES.md
-
-### Ansible ###
-# Local inventory files
-inventory/
-.ansible/

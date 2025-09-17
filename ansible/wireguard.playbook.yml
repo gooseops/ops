@@ -1,4 +1,5 @@
 ---
-- hosts: wireguard
+- name: Wireguard
+  hosts: wireguard
   roles:
     - role: wireguard

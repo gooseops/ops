@@ -29,9 +29,9 @@
 
     - name: ubuntu-docker | install docker | add apt repository
       ansible.builtin.shell: |
-        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
       args:
-        creates: /etc/apt/sources.list.d/docker
+        creates: /etc/apt/sources.list.d/docker.list
 
     - name: ubuntu-docker | install docker | install docker apt packages
       ansible.builtin.apt:

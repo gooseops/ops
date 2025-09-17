@@ -1,5 +1,6 @@
 ---
-- hosts: grafana
+- name: Grafana
+  hosts: grafana
   roles:
     - role: docker
     - role: grafana

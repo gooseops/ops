@@ -1,5 +1,6 @@
 ---
-- hosts: gooseops_fe
+- name: GooseOps Website
+  hosts: gooseops_fe
   roles:
     - role: node-exporter
     - role: nginx-base

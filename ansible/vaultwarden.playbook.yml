@@ -1,5 +1,6 @@
 ---
-- hosts: vaultwarden
+- name: Vaultwarden
+  hosts: vaultwarden
   roles:
     - role: node-exporter
     - role: docker

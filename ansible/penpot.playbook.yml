@@ -1,5 +1,6 @@
 ---
-- hosts: penpot
+- name: Penpot
+  hosts: penpot
   roles:
     - role: node-exporter
     - role: docker

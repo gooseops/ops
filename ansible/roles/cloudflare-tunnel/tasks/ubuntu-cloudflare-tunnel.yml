@@ -18,14 +18,16 @@
         path: /usr/share/keyrings
         state: directory
         mode: "0755"
-    - name: Install cloudflared | Download cloudflared gpg key
-      ansible.builtin.shell:
-        cmd: curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-        creates: /usr/share/keyrings/cloudflare-main.gpg
+    - name: Download GPG key
+      ansible.builtin.get_url:
+        url: https://pkg.cloudflare.com/cloudflare-main.gpg
+        dest: /usr/share/keyrings/cloudflare-main.gpg
+        mode: '0644'
     - name: Install cloudflared | Add cloudflared to apt list
       ansible.builtin.template:
         src: cloudflared.list.j2
         dest: /etc/apt/sources.list.d/cloudflared.list
+        mode: '0644'
     - name: Install cloudflared | Install cloudflared apt package
       ansible.builtin.apt:
         name:
@@ -45,10 +47,12 @@
       ansible.builtin.template:
         src: config.yml.j2
         dest: /etc/cloudflared/config.yml
+        mode: '0600'
     - name: Configure cloudflared tunnel | Add credentials.json file
       ansible.builtin.template:
         src: credentials.json.j2
         dest: /etc/cloudflared/credentials.json
+        mode: '0600'
 
 - name: Create cloudflared service
   become: true
