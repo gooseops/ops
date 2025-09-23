@@ -1,5 +1,6 @@
 ---
-- hosts: llm
+- name: Ollama
+  hosts: llm
   roles:
     - role: node-exporter
     - role: docker

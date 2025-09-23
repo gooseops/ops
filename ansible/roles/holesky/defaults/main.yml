@@ -1,5 +1,0 @@
-lighthouse_version: "v7.0.0-beta.5"
-## Geth version includes commit hash
-geth_version: "1.15.4-8ccca244"
-bin_inst_path: "/usr/local/bin"
-systemd_svc_name: "holesky"

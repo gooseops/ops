@@ -1,5 +1,6 @@
 ---
-- hosts: operators
+- name: Drosera Operator
+  hosts: operators
   roles:
     - role: node-exporter
     - role: drosera-operator

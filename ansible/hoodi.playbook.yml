@@ -1,5 +1,6 @@
 ---
-- hosts: hoodi
+- name: Hoodi
+  hosts: hoodi
   roles:
     - role: node-exporter
     - role: reth

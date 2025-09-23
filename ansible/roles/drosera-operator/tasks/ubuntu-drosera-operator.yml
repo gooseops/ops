@@ -1,5 +1,5 @@
 ---
-- name: ubuntu-operator | apt packages
+- name: ubuntu-operator | Apt packages
   become: true
   ansible.builtin.apt:
     name:
@@ -12,7 +12,7 @@
     - operator
     - apt-packages
 
-- name: operator
+- name: Operator
   vars:
     systemd_svc_name: drosera-operator
   block:
@@ -22,13 +22,13 @@
         remote_src: true
         src: "https://github.com/drosera-network/releases/releases/download/{{ app_ver }}/{{ systemd_svc_name }}-{{ app_ver }}-x86_64-unknown-linux-gnu.tar.gz"
         dest: "{{ bin_inst_path }}"
-      
+
     - name: Create systemd service file from template
       become: true
       ansible.builtin.template:
         src: "{{ systemd_svc_name }}.service.j2"
         dest: "/etc/systemd/system/{{ systemd_svc_name }}.service"
-        mode: '0644'
+        mode: "0644"
 
     - name: Enable and start the service
       become: true

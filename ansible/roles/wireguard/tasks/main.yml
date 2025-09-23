@@ -1,5 +1,6 @@
+---
 - name: Wireguard Role
-  import_tasks: ubuntu-wireguard.yml
+  ansible.builtin.import_tasks: ubuntu-wireguard.yml
   when: ansible_facts['os_family'] == "Debian"
   tags:
     - wireguard

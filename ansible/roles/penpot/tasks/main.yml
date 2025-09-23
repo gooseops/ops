@@ -1,6 +1,6 @@
-
+---
 - name: Configure Penpot
-  import_tasks: ubuntu-penpot.yml
+  ansible.builtin.import_tasks: ubuntu-penpot.yml
   when: ansible_facts['os_family'] == "Debian"
   tags:
     - penpot

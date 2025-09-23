@@ -1,3 +1,4 @@
+---
 version: "3.9"
 
 services:
@@ -8,7 +9,7 @@ services:
     init: true
     environment:
       - SKIP_DOMAIN_VALIDATION=true
-      - APACHE_PORT=11000 
+      - APACHE_PORT=11000
       - APACHE_IP_BINDING=0.0.0.0
     ports:
       - "8080:8080"

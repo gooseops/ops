@@ -11,7 +11,7 @@
     dest: /home/{{ ansible_user }}/monitor/docker-compose.yml
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Install Grafana Datasources File
   ansible.builtin.copy:
@@ -19,7 +19,7 @@
     dest: /home/{{ ansible_user }}/monitor/datasource_prometheus.yaml
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Install Dashboard Configuration File
   ansible.builtin.copy:
@@ -27,7 +27,7 @@
     dest: /home/{{ ansible_user }}/monitor/dashboard_config.yaml
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Install Node Exporter Dashboard File
   ansible.builtin.get_url:
@@ -35,7 +35,7 @@
     dest: /home/{{ ansible_user }}/monitor/dashboard_node_exporter.json
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Install Reth Metrics Dashboard File
   ansible.builtin.copy:
@@ -43,7 +43,7 @@
     dest: /home/{{ ansible_user }}/monitor/dashboard_reth_metrics.json
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Install Lighthouse Metrics Dashboard File
   ansible.builtin.copy:
@@ -51,7 +51,7 @@
     dest: /home/{{ ansible_user }}/monitor/dashboard_lighthouse_metrics.json
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Install Prometheus File
   ansible.builtin.template:
@@ -59,7 +59,7 @@
     dest: /home/{{ ansible_user }}/monitor/prometheus.yml
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Stop Docker Compose Service
   community.docker.docker_compose_v2:

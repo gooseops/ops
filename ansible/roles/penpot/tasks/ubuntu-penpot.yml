@@ -10,7 +10,7 @@
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
     - name: Install Penpot | Install Docker Compose file
       ansible.builtin.copy:
@@ -18,7 +18,7 @@
         dest: /opt/penpot/docker-compose.yml
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Install Penpot | Deploy Penpot using Docker Compose
       community.docker.docker_compose_v2:

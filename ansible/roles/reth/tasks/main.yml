@@ -1,6 +1,6 @@
-
+---
 - name: Configure Reth Node
-  import_tasks: ubuntu-reth.yml
+  ansible.builtin.import_tasks: ubuntu-reth.yml
   when: ansible_facts['os_family'] == "Debian"
   tags:
     - reth

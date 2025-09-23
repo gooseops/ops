@@ -1,4 +1,5 @@
 variable "eks_ami" {
+  type    = string
   default = "ami-1234567890abcdef"
 }
 

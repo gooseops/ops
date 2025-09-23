@@ -1,0 +1,71 @@
+---
+- name: Debug Jellyfin repo configuration
+  debug:
+    msg: |
+      Jellyfin OS: {{ jellyfin_os }}
+      Jellfyin Codename: {{ jellyfin_codename }}
+      Jellyfin Architecture: {{ jellyfin_architecture }}
+
+- name: Ubuntu Jellyfin | Apt packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+      - nfs-common
+      - openssl
+    state: present
+    update-cache: true
+
+- name: Ubuntu Jellyfin | NFS
+  become: true
+  block:
+    # - name: Ubuntu Jellyfin | NFS | Create Media Mount
+    #   ansible.builtin.file:
+    #     mode: "0755"
+    #     path: /mnt/nfs/media
+    #     state: "directory"
+
+    - name: Ubuntu Jellyfin | NFS | Mount Media NFS Share
+      ansible.posix.mount:
+        path: "/mnt/nfs/media"
+        src: "192.168.0.50:/nfs/media"
+        fstype: nfs
+        opts: defaults
+        state: mounted
+
+- name: Ubuntu Jellyfin | Install
+  become: true
+  block:
+    - name: Ubuntu Jellyfin | Install | Create `keyrings` Directory
+      ansible.builtin.file:
+        mode: "0755"
+        path: /etc/apt/keyrings
+        state: "directory"
+
+    - name: Ubuntu Jellyfin | Install | Download GPG Key
+      ansible.builtin.shell: |
+        curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key | gpg --dearmor --yes --output /etc/apt/keyrings/jellyfin.gpg
+      args:
+        creates: /etc/apt/keyrings/jellyfin.gpg
+
+    - name: Ubuntu Jellyfin | Install | Apt Repository
+      ansible.builtin.template:
+        src: jellyfin.sources.j2
+        dest: /etc/apt/sources.list.d/jellyfin.sources
+        mode: '0644'
+
+    - name: Ubuntu Jellyfin | Install | Package
+      ansible.builtin.apt:
+        name:
+          - jellyfin
+        state: present
+        update-cache: true
+
+    - name: Ubuntu Jellyfin | Install | Configure Ownership
+      ansible.builtin.file:
+        path: /etc/jellyfin
+        owner: jellyfin
+        group: adm
+        recurse: true
+        mode: '0755'

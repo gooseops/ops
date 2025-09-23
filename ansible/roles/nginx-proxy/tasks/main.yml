@@ -1,6 +1,6 @@
-
+---
 - name: Configure nginx
-  import_tasks: ubuntu-nginx-proxy.yml
+  ansible.builtin.import_tasks: ubuntu-nginx-proxy.yml
   when: ansible_facts['os_family'] == "Debian"
   tags:
     - nginx-proxy

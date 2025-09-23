@@ -1,0 +1,5 @@
+---
+- name: Jellyfin for Ubuntu
+  ansible.builtin.import_tasks: ubuntu-jellyfin.yml
+  tags:
+    - jellyfin

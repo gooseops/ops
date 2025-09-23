@@ -5,7 +5,7 @@
     pkg:
       - curl
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Check for nvidia-smi
   ansible.builtin.stat:
@@ -47,7 +47,7 @@
     dest: /home/{{ ansible_user }}/open_webui/docker-compose.yml
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Stop Docker Compose Service
   community.docker.docker_compose_v2:

@@ -1,5 +1,5 @@
-
+---
 - name: Install Docker
-  import_tasks: ubuntu-docker.yml
+  ansible.builtin.import_tasks: ubuntu-docker.yml
   tags:
     - docker

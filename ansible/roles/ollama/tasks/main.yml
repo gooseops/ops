@@ -1,6 +1,6 @@
-
+---
 - name: Ollama Role
-  import_tasks: ubuntu-ollama.yml
+  ansible.builtin.import_tasks: ubuntu-ollama.yml
   when: ansible_facts['os_family'] == "Debian"
   tags:
     - ollama
