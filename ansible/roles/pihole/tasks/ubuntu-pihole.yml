@@ -1,0 +1,48 @@
+---
+- name: Configure DNS on Systemd Resolver
+  become: true
+  ansible.builtin.template:
+    src: resolved.conf.j2
+    dest: /etc/systemd/resolved.conf
+    mode: '0644'
+  notify: Restart Systemd Resolved
+
+- name: Run Handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Create Pihole Datadir
+  become: true
+  ansible.builtin.file:
+    path: "{{ pihole_data_dir }}"
+    state: directory
+    owner: administrator
+    group: administrator
+    mode: '0755'
+
+- name: Create Pihole Docker Compose Directory
+  ansible.builtin.file:
+    path: "{{ pihole_docker_compose_dir }}"
+    state: "directory"
+    mode: "0755"
+
+- name: Install Docker Compose File
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ pihole_docker_compose_dir }}/docker-compose.yml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+
+- name: Stop Docker Compose Service
+  community.docker.docker_compose_v2:
+    project_src: "{{ pihole_docker_compose_dir }}"
+    pull: always
+    state: stopped
+    remove_orphans: true
+
+- name: Start Docker Compose Service
+  community.docker.docker_compose_v2:
+    project_src: "{{ pihole_docker_compose_dir }}"
+    pull: always
+    state: present
+    remove_orphans: true
