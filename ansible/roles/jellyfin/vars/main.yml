@@ -1,0 +1,18 @@
+jellyfin_codename_map:
+  ubuntu:
+    "20.04": "focal"
+    "22.04": "jammy"
+    "24.04": "noble"
+  debian:
+    "10": "buster"
+    "11": "bullseye"
+    "12": "bookworm"
+
+jellyfin_architecture_map:
+  arch:
+    "x86_64": "amd64"
+    "aarch64": "arm64"
+
+jellyfin_codename: "{{ jellyfin_codename_map[ansible_distribution | lower][ansible_distribution_version] }}"
+jellyfin_os: "{{ ansible_distribution | lower }}"
+jellyfin_architecture: "{{ jellyfin_architecture_map['arch'][ansible_architecture] }}"

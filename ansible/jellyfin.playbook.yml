@@ -1,0 +1,7 @@
+---
+- name: Jellyfin
+  hosts: jellyfin
+  roles:
+    - role: node-exporter
+    - role: jellyfin
+    - role: swap

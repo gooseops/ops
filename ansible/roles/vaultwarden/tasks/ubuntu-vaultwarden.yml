@@ -2,7 +2,7 @@
 - name: Run vaultwarden container
   community.docker.docker_container:
     name: vaultwarden
-    image: vaultwarden/server:latest
+    image: vaultwarden/server:1.31.0
     restart_policy: unless-stopped
     state: started
     published_ports:
