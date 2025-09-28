@@ -25,6 +25,7 @@
     dest: "{{ node_exporter_binary_install_dir }}"
     remote_src: true
     mode: "0755"
+  notify: Restart Node Exporter
 
 - name: Create systemd service file from template
   become: true
@@ -32,6 +33,7 @@
     src: "{{ node_exporter_systemd_svc_name }}.service.j2"
     dest: "/etc/systemd/system/{{ node_exporter_systemd_svc_name }}.service"
     mode: "0644"
+  notify: Restart Node Exporter
 
 - name: Enable and start the service
   become: true
@@ -39,4 +41,4 @@
     name: "{{ node_exporter_systemd_svc_name }}"
     daemon_reload: true
     enabled: true
-    state: restarted
+    state: started

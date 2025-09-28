@@ -1,0 +1,6 @@
+---
+- name: Omada Software Controller Role
+  ansible.builtin.import_tasks: ubuntu-omada-software-controller.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - omada-software-controller

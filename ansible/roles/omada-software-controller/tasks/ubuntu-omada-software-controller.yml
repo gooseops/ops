@@ -1,0 +1,20 @@
+---
+- name: Omada Software Controller | Install apt packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - openjdk-17-jre-headless
+    state: present
+    update-cache: true
+
+- name: Omada Software Controller | Install MongoDB .deb package
+  become: true
+  ansible.builtin.apt:
+    deb: "{{ omada_software_controller_mongodb_link }}"
+    update-cache: true
+
+- name: Omada Software Controller | Install Omada Software Controller .deb package
+  become: true
+  ansible.builtin.apt:
+    deb: "{{ omada_software_controller_link }}"
+    update-cache: true

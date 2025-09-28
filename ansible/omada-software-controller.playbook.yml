@@ -1,0 +1,7 @@
+---
+- name: Omada Software Controller
+  hosts: omada
+  roles:
+    - role: node-exporter
+    - role: omada-software-controller
+    - role: swap

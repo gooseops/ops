@@ -2,7 +2,7 @@
 - name: Pihole
   hosts: pihole
   roles:
-    # - role: node-exporter
+    - role: node-exporter
     - role: docker
     - role: pihole
-    # - role: swap
+    - role: swap
