@@ -1,0 +1,5 @@
+---
+- name: Base Server Configuration
+  hosts: all
+  roles:
+    - role: node-exporter
