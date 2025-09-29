@@ -2,6 +2,5 @@
 - name: Hoodi
   hosts: hoodi
   roles:
-    - role: node-exporter
     - role: reth
     - role: swap
