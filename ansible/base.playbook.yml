@@ -1,5 +1,17 @@
 ---
-- name: Base Server Configuration
+- name: Base Configuration
   hosts: all
+  pre_tasks:
+    - name: Base Configuration
+      become: true
+      ansible.builtin.apt:
+        name:
+          - bash-completion
+          - iputils-ping
+          - lsof
+          - vim
+        state: present
+        update-cache: true
+
   roles:
     - role: node-exporter

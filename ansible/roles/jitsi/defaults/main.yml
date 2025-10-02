@@ -1,0 +1,9 @@
+jitsi_domain: "meet.example.com"
+jitsi_email: "john@example.com"
+jitsi_crt_file: "/etc/letsencrypt/live/{{ jitsi_domain }}/fullchain.pem"
+jitsi_key_file: "/etc/letsencrypt/live/{{ jitsi_domain }}/privkey.pem"
+jitsi_keystore_create: false
+jitsi_keystore_dir: "/etc/security"
+jitsi_keystore_path: "{{ jitsi_keystore_dir }}/cacerts"
+jitsi_keystore_pass: "changeme"
+jitsi_ssl_enabled: true

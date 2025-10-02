@@ -1,0 +1,125 @@
+---
+- name: Ubuntu Jitsi | Apt packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - curl
+      - gnupg2
+      - nginx-full
+      - openjdk-17-jdk
+      - openssl
+      - python3-certbot-nginx
+
+## TODO: make idempotent
+- name: Ubuntu Jitsi | TLS Certificates with Certbot
+  become: true
+  ansible.builtin.command: certbot certonly --nginx -d {{ jitsi_domain }} --non-interactive --agree-tos --email {{ jitsi_email }}
+  when: jitsi_ssl_enabled
+  notify: Restart Nginx
+
+## TODO: make idempotent
+- name: Ubuntu Jitsi | Import TLS Cert into Java Keystore
+  become: true
+  community.general.java_cert:
+    cert_alias: "{{ jitsi_domain }}"
+    cert_path: "{{ jitsi_crt_file }}"
+    keystore_create: "{{ jitsi_keystore_create }}"
+    keystore_pass: "{{ jitsi_keystore_pass }}"
+    keystore_path: "{{ jitsi_keystore_path }}"
+    state: present
+  notify: Restart Jitsi
+
+- name: Ubuntu Jitsi | Install
+  become: true
+  block:
+    - name: Ubuntu Jitsi | Install | Keyrings Directory
+      ansible.builtin.file:
+        mode: "0755"
+        path: /usr/share/keyrings
+        state: "directory"
+
+    - name: Ubuntu Jitsi | Install | Prosidy GPG Key
+      ansible.builtin.get_url:
+        dest: /usr/share/keyrings/prosody-debian-packages.key
+        url: https://prosody.im/files/prosody-debian-packages.key
+        mode: "0644"
+
+    - name: Ubuntu Jitsi | Install | Prosidy Apt Repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/prosody-debian-packages.key] http://packages.prosody.im/debian {{ ansible_distribution_release }} main"
+        state: present
+        update_cache: true
+        filename: prosody
+
+    - name: Ubuntu Jitsi | Install | Jitsi GPG Key
+      ansible.builtin.shell: |
+        curl -sL https://download.jitsi.org/jitsi-key.gpg.key | sh -c 'gpg --dearmor > /usr/share/keyrings/jitsi-keyring.gpg'
+      args:
+        creates: /usr/share/keyrings/jitsi-keyring.gpg
+
+    - name: Ubuntu Jitsi | Install | Jitsi Apt Repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/jitsi-keyring.gpg] https://download.jitsi.org stable/"
+        state: present
+        update_cache: true
+        filename: jitsy
+
+    - name: Ubuntu Jitsi | Install | More Apt packages
+      become: true
+      ansible.builtin.apt:
+        name:
+          - lua5.2
+        state: present
+        update-cache: true
+
+    - name: Ubuntu Jitsi | Install | Set Domain
+      ansible.builtin.debconf:
+        name: jitsi-videobridge
+        question: jitsi-videobridge/jvb-hostname
+        value: "{{ jitsi_domain }}"
+        vtype: string
+      no_log: true
+
+    - name: Ubuntu Jitsi | Install | Set Telephony
+      ansible.builtin.debconf:
+        name: jitsi-meet-web-config
+        question: jitsi-meet/jaas-choice
+        value: false
+        vtype: boolean
+      # no_log: true
+
+    - name: Ubuntu Jitsi | Install | Set Cert Key Path
+      ansible.builtin.debconf:
+        name: jitsi-meet-web-config
+        question: jitsi-meet/cert-path-key
+        value: /etc/letsencrypt/live/{{ jitsi_domain }}/privkey.pem
+        vtype: string
+      no_log: true
+
+    - name: Ubuntu Jitsi | Install | Set Cert Path
+      ansible.builtin.debconf:
+        name: jitsi-meet-web-config
+        question: jitsi-meet/cert-path-crt
+        value: /etc/letsencrypt/live/{{ jitsi_domain }}/fullchain.pem
+        vtype: string
+      no_log: true
+
+    - name: Ubuntu Jitsi | Install | Set Certificate Type
+      ansible.builtin.debconf:
+        name: jitsi-meet-web-config
+        question: jitsi-meet/cert-choice
+        value: I want to use my own certificate
+        vtype: select
+      no_log: true
+
+    - name: Ubuntu Jitsi | Install | Install | Package
+      ansible.builtin.apt:
+        name:
+          - jitsi-meet
+        state: present
+        update-cache: true
+      notify:
+        - Restart Prosody
+        - Restart Jicofo
+        - Restart Videobridge

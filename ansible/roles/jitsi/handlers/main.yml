@@ -1,0 +1,22 @@
+---
+- name: Restart Nginx
+  become: true
+  ansible.builtin.service:
+    name: nginx
+    state: restarted
+
+- name: Restart Prosody
+  become: true
+  ansible.builtin.service:
+    name: prosody
+    state: restarted
+- name: Restart Jicofo
+  become: true
+  ansible.builtin.service:
+    name: jicofo
+    state: restarted
+- name: Restart Videobridge
+  become: true
+  ansible.builtin.service:
+    name: jitsi-videobridge2
+    state: restarted

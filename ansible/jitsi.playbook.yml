@@ -1,0 +1,8 @@
+---
+- name: Jitsi
+  hosts: jitsi
+  roles:
+    - role: jitsi
+    - role: swap
+      vars:
+        swapfile_size: 2G
