@@ -1,0 +1,8 @@
+---
+- name: Restart Livekit
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: livekit-docker
+    enabled: true
+    state: restarted

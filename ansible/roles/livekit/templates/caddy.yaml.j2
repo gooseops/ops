@@ -1,0 +1,50 @@
+logging:
+  logs:
+    default:
+      level: INFO
+storage:
+  "module": "file_system"
+  "root": "/data"
+apps:
+  tls:
+    certificates:
+      automate:
+        - {{ livekit_domain }}
+        - {{ livekit_turn_domain }}
+        - {{ livekit_whip_domain }}
+  layer4:
+    servers:
+      main:
+        listen: [":443"]
+        routes:
+          - match:
+            - tls:
+                sni:
+                  - "{{ livekit_turn_domain }}"
+            handle:
+              - handler: tls
+              - handler: proxy
+                upstreams:
+                  - dial: ["{{ livekit_caddy_local_ip }}:5349"]
+          - match:
+              - tls:
+                  sni:
+                    - "{{ livekit_domain }}"
+            handle:
+              - handler: tls
+                connection_policies:
+                  - alpn: ["http/1.1"]
+              - handler: proxy
+                upstreams:
+                  - dial: ["localhost:7880"]
+          - match:
+              - tls:
+                  sni:
+                    - "{{ livekit_whip_domain }}"
+            handle:
+              - handler: tls
+                connection_policies:
+                  - alpn: ["http/1.1"]
+              - handler: proxy
+                upstreams:
+                  - dial: ["localhost:8080"]
