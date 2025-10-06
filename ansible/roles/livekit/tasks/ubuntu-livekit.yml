@@ -1,0 +1,78 @@
+---
+- name: Ubuntu Livekit | Livekit Directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ livekit_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Ubuntu Livekit | Caddy Data Directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ livekit_dir }}/caddy_data"
+    state: directory
+    mode: "0755"
+
+- name: Ubuntu Livekit | Livekit Caddy File
+  become: true
+  ansible.builtin.template:
+    src: caddy.yaml.j2
+    dest: "{{ livekit_dir }}/caddy.yaml"
+    mode: "0644"
+  notify: Restart Livekit
+
+- name: Ubuntu Livekit | Livekit Configuration File
+  become: true
+  ansible.builtin.template:
+    src: livekit.yaml.j2
+    dest: "{{ livekit_dir }}/livekit.yaml"
+    mode: "0644"
+  notify: Restart Livekit
+
+- name: Ubuntu Livekit | Docker Compose File
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yaml.j2
+    dest: "{{ livekit_dir }}/docker-compose.yaml"
+    mode: "0644"
+  notify: Restart Livekit
+
+- name: Ubuntu Livekit | Redis Config File
+  become: true
+  ansible.builtin.copy:
+    src: redis.conf
+    dest: "{{ livekit_dir }}/redis.conf"
+    mode: "0644"
+  notify: Restart Livekit
+
+- name: Ubuntu Livekit | Egress File
+  become: true
+  ansible.builtin.template:
+    src: egress.yaml.j2
+    dest: "{{ livekit_dir }}/egress.yaml"
+    mode: "0644"
+  notify: Restart Livekit
+
+- name: Ubuntu Livekit | Ingress File
+  become: true
+  ansible.builtin.template:
+    src: ingress.yaml.j2
+    dest: "{{ livekit_dir }}/ingress.yaml"
+    mode: "0644"
+  notify: Restart Livekit
+
+- name: Ubuntu Livekit | Systemd Service File
+  become: true
+  ansible.builtin.template:
+    src: livekit-docker.service.j2
+    dest: "/etc/systemd/system/livekit-docker.service"
+    mode: "0644"
+  notify: Restart Livekit
+
+- name: Ubuntu Livekit | Enable and Start Livekit
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: livekit-docker
+    enabled: true
+    state: started

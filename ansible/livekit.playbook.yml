@@ -1,0 +1,9 @@
+---
+- name: Livekit
+  hosts: livekit
+  roles:
+    - role: docker
+    - role: livekit
+    # - role: swap
+    #   vars:
+    #     swapfile_size: 2G

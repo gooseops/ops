@@ -1,0 +1,35 @@
+port: {{ livekit_port }}
+bind_addresses:
+    - ""
+rtc:
+    tcp_port: {{ livekit_rtc_tcp_port }}
+    port_range_start: {{ livekit_rtc_port_range_start }}
+    port_range_end: {{ livekit_rtc_port_range_end }}
+    use_external_ip: {{ livekit_rtc_use_external_ip }}
+{% if livekit_rtc_use_external_ip == "false" %}
+    node_ip: {{ livekit_rtc_node_ip }}
+{% endif %}
+    enable_loopback_candidate: false
+redis:
+    address: localhost:6379
+    username: ""
+    password: ""
+    db: 0
+    use_tls: false
+    sentinel_master_name: ""
+    sentinel_username: ""
+    sentinel_password: ""
+    sentinel_addresses: []
+    cluster_addresses: []
+    max_redirects: null
+turn:
+    enabled: true
+    domain: {{ livekit_turn_domain }}
+    tls_port: {{ livekit_turn_tls_port }}
+    udp_port: {{ livekit_turn_udp_port }}
+    external_tls: true
+ingress:
+    rtmp_base_url: rtmp://{{ livekit_domain }}:1935/x
+    whip_base_url: https://{{ livekit_whip_domain }}/w
+keys:
+  {{ livekit_api_key }}: {{ livekit_api_secret }}

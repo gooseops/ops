@@ -1,0 +1,16 @@
+[Unit]
+Description=LiveKit Server Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+LimitNOFILE=500000
+Restart=always
+WorkingDirectory={{ livekit_dir }}
+# Shutdown container (if running) when unit is started
+ExecStartPre=/usr/bin/docker compose -f docker-compose.yaml down
+ExecStart=/usr/bin/docker compose -f docker-compose.yaml up
+ExecStop=/usr/bin/docker compose -f docker-compose.yaml down
+
+[Install]
+WantedBy=multi-user.target
