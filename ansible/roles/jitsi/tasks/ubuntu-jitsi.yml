@@ -28,7 +28,10 @@
     keystore_pass: "{{ jitsi_keystore_pass }}"
     keystore_path: "{{ jitsi_keystore_path }}"
     state: present
-  notify: Restart Jitsi
+  notify:
+    - Restart Prosody
+    - Restart Jicofo
+    - Restart Videobridge
 
 - name: Ubuntu Jitsi | Install
   become: true
@@ -87,7 +90,7 @@
         question: jitsi-meet/jaas-choice
         value: false
         vtype: boolean
-      # no_log: true
+      no_log: true
 
     - name: Ubuntu Jitsi | Install | Set Cert Key Path
       ansible.builtin.debconf:

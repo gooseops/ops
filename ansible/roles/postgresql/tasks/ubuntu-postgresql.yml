@@ -1,0 +1,103 @@
+---
+- name: Postgresql Role | System Dependencies
+  become: true
+  ansible.builtin.apt:
+    update_cache: yes
+    name:
+      - ca-certificates
+      - curl
+      - gnupg2
+      - python3-psycopg2
+
+- name: Postgresql Role | Install
+  become: true
+  block:
+    - name: Postgresql Role | Install | Keyring Directory
+      ansible.builtin.file:
+        mode: "0755"
+        path: /usr/share/keyrings
+        state: "directory"
+
+    - name: Postgresql Role | Install | Postgresql GPG Key
+      ansible.builtin.get_url:
+        dest: /usr/share/keyrings/apt.postgresql.org.asc
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        mode: "0644"
+
+    - name: Postgresql Role | Install | Postgresql Apt Repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+        state: present
+        update_cache: true
+        filename: postgresql
+
+    - name: Postgresql Role | Install | Postgresql package
+      ansible.builtin.apt:
+        update_cache: yes
+        name:
+          - postgresql-{{ postgresql_version }}
+
+    - name: Postgresql Role | Ensure PostgreSQL is running and enabled
+      ansible.builtin.systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+
+- name: Postgresql Role | Configure
+  become: true
+  block:
+    - name: Postgresql Role | Configure | PostgreSQL Listen Interfaces
+      ansible.builtin.lineinfile:
+        path: "{{ postgresql_conf_path }}"
+        regexp: '^listen_addresses'
+        line: "listen_addresses = '{{ postgresql_listen_addresses | join(',') }}'"
+      notify: Restart Postgresql
+
+    - name: Postgresql Role | Configure | PostgreSQL HBA Entries
+      community.postgresql.postgresql_pg_hba:
+        dest: "{{ postgresql_hba_path }}"
+        contype: host
+        users: "{{ item.user }}"
+        source: "{{ item.ip }}"
+        databases: "{{ item.db }}"
+        method: "{{ item.auth }}"
+        create: true
+      loop: "{{ postgresql_hba_entries }}"
+      no_log: true
+      notify: Restart Postgresql
+
+    - name: Postgresql Role | Configure | Super User Password
+      become: true
+      become_user: "postgres"
+      vars:
+        ansible_ssh_pipelining: true
+      community.postgresql.postgresql_user:
+        name: "postgres"
+        password: "{{ postgresql_superuser_password }}"
+        state: present
+      no_log: true
+
+    - name: Postgresql Role | Configure | Create Postgresql Users
+      become: true
+      become_user: postgres
+      vars:
+        ansible_ssh_pipelining: true
+      community.postgresql.postgresql_user:
+        name: "{{ item.username }}"
+        password: "{{ item.userpass }}"
+        state: present
+      loop: "{{ postgresql_users }}"
+      no_log: true
+
+    - name: Postgresql Role | Configure | Create Postgresql Database
+      become: true
+      become_user: postgres
+      vars:
+        ansible_ssh_pipelining: true
+      community.postgresql.postgresql_db:
+        name: "{{ item.db_name }}"
+        owner: "{{ item.db_user }}"
+        encoding: "{{ item.db_encoding }}"
+        state: present
+      loop: "{{ postgresql_databases }}"
+      no_log: true
