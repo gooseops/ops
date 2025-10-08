@@ -1,2 +1,0 @@
----
-ansible_distribution_release: "{{ ansible_distribution_release | default('noble') }}"

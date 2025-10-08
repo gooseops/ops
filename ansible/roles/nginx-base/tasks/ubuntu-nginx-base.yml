@@ -1,5 +1,5 @@
 ---
-- name: Install needed packages
+- name: Nginx Base Role | Install System Packages
   become: true
   ansible.builtin.apt:
     update_cache: true
@@ -11,22 +11,23 @@
       - lsb-release
       - ubuntu-keyring
 
-- name: Install NGINX and Certbot
+- name: Nginx Base Role | Install NGINX and Certbot
   become: true
   block:
-    - name: Install NGINX and Certbot | Download NGINX signing key to /usr/share/keyrings
+    - name: Nginx Base Role | Install NGINX and Certbot | Download NGINX Signing Key
       ansible.builtin.shell: |
         curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
       args:
         creates: /usr/share/keyrings/nginx-archive-keyring.gpg
 
-    - name: Install NGINX and Certbot | Add NGINX repository
-      ansible.builtin.shell: |
-        echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/ubuntu $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
-      args:
-        creates: /etc/apt/sources.list.d/nginx.list
+    - name: Nginx Base Role | Install NGINX and Certbot | Add NGINX Apt Repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/ubuntu {{ ansible_distribution_release }} nginx"
+        state: present
+        update_cache: true
+        filename: nginx
 
-    - name: Install NGINX and Certbot | Install apt packages
+    - name: Nginx Base Role | Install NGINX and Certbot | Install Apt Packages
       ansible.builtin.apt:
         update_cache: true
         state: latest
@@ -34,14 +35,14 @@
           - nginx
           - python3-certbot-nginx
 
-- name: Ensure NGINX service is running and enabled
+- name: Nginx Base Role | Ensure NGINX service is running and enabled
+  become: true
   ansible.builtin.service:
     name: nginx
     state: started
     enabled: true
-  become: true
 
-- name: Create Nginx configuration directories
+- name: Nginx Base Role | Create Nginx Directories
   become: true
   ansible.builtin.file:
     path: "{{ item }}"
@@ -53,7 +54,7 @@
     - /etc/nginx/sites-available
     - /etc/nginx/sites-enabled
 
-- name: Configure Nginx
+- name: Nginx Base Role | Configure Nginx
   become: true
   ansible.builtin.copy:
     src: nginx.conf
@@ -63,6 +64,7 @@
     mode: "0644"
   notify: Restart Nginx
 
-- name: Test NGINX configuration
+- name: Nginx Base Role | Test NGINX configuration
   become: true
   ansible.builtin.command: nginx -t
+  changed_when: false
