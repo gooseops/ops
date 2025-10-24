@@ -1,0 +1,7 @@
+---
+- name: Restart InvokeAI Compose
+  community.docker.docker_compose_v2:
+    project_src: /home/{{ ansible_user }}/invokeai
+    pull: always
+    state: restarted
+    remove_orphans: true

@@ -1,0 +1,10 @@
+---
+- name: Synapse
+  hosts: synapse
+  roles:
+    - role: synapse
+    - role: nginx-base
+    - role: nginx-proxy
+    - role: swap
+      vars:
+        swapfile_size: 2G

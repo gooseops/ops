@@ -17,22 +17,14 @@
     state: present
     update-cache: true
 
-- name: Ubuntu Jellyfin | NFS
-  become: true
-  block:
-    # - name: Ubuntu Jellyfin | NFS | Create Media Mount
-    #   ansible.builtin.file:
-    #     mode: "0755"
-    #     path: /mnt/nfs/media
-    #     state: "directory"
-
-    - name: Ubuntu Jellyfin | NFS | Mount Media NFS Share
-      ansible.posix.mount:
-        path: "/mnt/nfs/media"
-        src: "192.168.0.50:/nfs/media"
-        fstype: nfs
-        opts: defaults
-        state: mounted
+- name: Ubuntu Jellyfin | Mount Media NFS Share
+  when: jellyfin_nfs_share is defined
+  ansible.posix.mount:
+    path: "/mnt/nfs/media"
+    src: "{{ jellyfin_nfs_share }}"
+    fstype: nfs
+    opts: defaults
+    state: mounted
 
 - name: Ubuntu Jellyfin | Install
   become: true

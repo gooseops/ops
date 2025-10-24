@@ -1,12 +1,14 @@
 ---
 - name: Nginx Proxy | Write Configs From Loop | Obtain SSL certificates using Certbot
-  when: item.nginx_proxy_tls_enabled and item.nginx_proxy_crt_type == "letsencrypt"
+  when:
+    - item.nginx_proxy_tls_enabled is defined and item.nginx_proxy_tls_enabled
+    - item.nginx_proxy_crt_type is defined and item.nginx_proxy_crt_type == "letsencrypt"
   become: true
   ansible.builtin.command: certbot certonly --nginx -d {{ item.nginx_proxy_domain }} --non-interactive --agree-tos --email {{ item.nginx_proxy_email }}
   notify: Restart Nginx
 
 - name: Nginx Proxy | Write Configs From Loop | Private Cert
-  when: item.nginx_proxy_crt_type == "private"
+  when: item.nginx_proxy_crt_type is defined and item.nginx_proxy_crt_type == "private"
   become: true
   rescue:
     - name: Nginx Proxy | Write Configs From Loop | Private Cert | Fail if BYO cert is missing
@@ -36,7 +38,7 @@
     - name: Nginx Proxy | Write Configs From Loop | HTTP Servers | Write Config
       ansible.builtin.copy:
         content: "{{ item.nginx_proxy_http_server }}"
-        dest: /etc/nginx/conf.d/stream/{{ item.nginx_proxy_domain }}
+        dest: /etc/nginx/sites-available/{{ item.nginx_proxy_domain }}
         mode: "0644"
       notify: Restart Nginx
 
@@ -52,7 +54,7 @@
   become: true
   ansible.builtin.copy:
     content: "{{ item.nginx_proxy_stream_server }}"
-    dest: /etc/nginx/conf.d/stream/{{ item.nginx_proxy_config_name }}
+    dest: /etc/nginx/conf.d/stream/{{ item.nginx_proxy_config_name }}.conf
     mode: "0644"
   notify: Restart Nginx
 

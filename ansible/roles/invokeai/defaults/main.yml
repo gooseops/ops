@@ -1,0 +1,5 @@
+---
+invokeai_version: "latest"
+invokeai_container_port: 9090
+invokeai_host_port: 9090
+invokeai_gpu_count: "all"

@@ -56,7 +56,7 @@
     - name: Postgresql Role | Configure | PostgreSQL HBA Entries
       community.postgresql.postgresql_pg_hba:
         dest: "{{ postgresql_hba_path }}"
-        contype: host
+        contype: "{{ item.contype | default('host') }}"
         users: "{{ item.user }}"
         source: "{{ item.ip }}"
         databases: "{{ item.db }}"
@@ -98,6 +98,9 @@
         name: "{{ item.db_name }}"
         owner: "{{ item.db_user }}"
         encoding: "{{ item.db_encoding }}"
+        lc_collate: "{{ item.db_lc_collate | default('') }}"
+        lc_ctype: "{{ item.db_lc_ctype | default('') }}"
         state: present
+        template: "{{ item.db_template | default('') }}"
       loop: "{{ postgresql_databases }}"
       no_log: true

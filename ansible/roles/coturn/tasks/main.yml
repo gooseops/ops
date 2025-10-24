@@ -1,0 +1,6 @@
+---
+- name: Configure Coturn
+  ansible.builtin.import_tasks: ubuntu-coturn.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - coturn

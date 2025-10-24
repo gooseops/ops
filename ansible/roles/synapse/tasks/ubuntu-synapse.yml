@@ -1,0 +1,61 @@
+---
+- name: Synapse Role | System Dependencies
+  become: true
+  ansible.builtin.apt:
+    update_cache: yes
+    name:
+      - apt-transport-https
+      - curl
+      - libpq5
+      - lsb-release
+
+- name: Synapse Role | Install
+  become: true
+  block:
+    - name: Synapse Role | Install | Keyring Directory
+      ansible.builtin.file:
+        mode: "0755"
+        path: /usr/share/keyrings
+        state: "directory"
+
+    - name: Synapse Role | Install | Synapse GPG Key
+      ansible.builtin.get_url:
+        dest: /usr/share/keyrings/matrix-org-archive-keyring.gpg
+        url: https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg
+        mode: "0644"
+
+    - name: Synapse Role | Install | Synapse Apt Repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/matrix-org-archive-keyring.gpg] https://packages.matrix.org/debian/ {{ ansible_distribution_release }} main"
+        state: present
+        update_cache: true
+        filename: synapse
+
+    - name: Synapse Role | Install | Synapse package
+      ansible.builtin.apt:
+        update_cache: yes
+        name:
+          - matrix-synapse-py3
+
+    - name: Synapse Role | Ensure Synapse is running and enabled
+      ansible.builtin.systemd:
+        name: matrix-synapse
+        state: started
+        enabled: true
+
+- name: Synapse Role | Configure
+  become: true
+  block:
+    - name: Synapse Role | Configure | Homeserver Config File
+      ansible.builtin.template:
+        src: homeserver.yaml.j2
+        dest: "{{ synapse_dir }}/homeserver.yaml"
+        mode: "0644"
+      notify: Restart Synapse
+
+    - name: Synapse Role | Configure | Server Name Config File
+      ansible.builtin.template:
+        src: server_name.yaml.j2
+        dest: "{{ synapse_config_dir }}/server_name.yaml"
+        mode: "0644"
+      notify: Restart Synapse

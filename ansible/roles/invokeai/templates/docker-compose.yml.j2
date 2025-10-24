@@ -1,0 +1,25 @@
+
+services:
+  invokeai:
+    image: "ghcr.io/invoke-ai/invokeai:{{ invokeai_version }}"
+    environment:
+      - INVOKEAI_PORT={{ invokeai_container_port }}
+      - INVOKEAI_ROOT=/invokeai
+      - HF_HOME=/invokeai/.cache/huggingface
+
+    ports:
+      - "{{ invokeai_host_port }}:{{ invokeai_container_port }}"
+    volumes:
+      - invokeai_data:/invokeai
+      - hf_cache:/invokeai/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: {{ invokeai_gpu_count }}
+              capabilities: [gpu]
+
+volumes:
+  invokeai_data:
+  hf_cache:

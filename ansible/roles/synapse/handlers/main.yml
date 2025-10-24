@@ -1,0 +1,6 @@
+---
+- name: Restart Synapse
+  become: true
+  ansible.builtin.systemd:
+    name: matrix-synapse
+    state: restarted

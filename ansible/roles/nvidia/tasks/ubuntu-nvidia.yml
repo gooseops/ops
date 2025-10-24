@@ -1,0 +1,50 @@
+---
+- name: Nvidia Role | Install dependencies
+  become: true
+  ansible.builtin.apt:
+    pkg:
+      - curl
+      - gnupg2
+    state: present
+    update_cache: true
+
+- name: Nvidia Role | Check for nvidia-smi
+  ansible.builtin.stat:
+    path: /usr/bin/nvidia-smi
+  register: nvidia_smi
+
+- name: Nvidia Role | Install Nvidia Drivers
+  become: true
+  when: not nvidia_smi.stat.exists
+  block:
+    - name: Install Nvidia Drivers | Server Drivers
+      ansible.builtin.command: ubuntu-drivers install --gpgpu
+    - name: Install Nvidia Drivers | Common Drivers
+      ansible.builtin.command: ubuntu-drivers install
+
+- name: Nvidia Role | Install Nvidia Container Toolkit
+  when: nvidia_container_toolkit_enabled
+  become: true
+  block:
+    - name: Nvidia Role | Install Nvidia Container Toolkit | Download Nvidia Container Toolkit Signing Key
+      ansible.builtin.shell: |
+        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+    - name: Nvidia Role | Install Nvidia Container Toolkit | Add Nvidia Container Toolkit Apt Repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+        state: present
+        update_cache: true
+        filename: nvidia-container-toolkit
+
+    - name: Nvidia Role | Install Nvidia Container Toolkit | Install Nvidia Container Toolkit Apt Packages
+      ansible.builtin.apt:
+        update_cache: true
+        state: present
+        pkg:
+          - nvidia-container-toolkit={{ nvidia_container_toolkit_version }}
+          - nvidia-container-toolkit-base={{ nvidia_container_toolkit_version }}
+          - libnvidia-container-tools={{ nvidia_container_toolkit_version }}
+          - libnvidia-container1={{ nvidia_container_toolkit_version }}

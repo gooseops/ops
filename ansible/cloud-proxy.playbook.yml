@@ -1,0 +1,7 @@
+---
+- name: Cloud Proxy
+  hosts: cloud_proxy
+  roles:
+    - role: nginx-base
+    - role: nginx-proxy
+    # - role: swap

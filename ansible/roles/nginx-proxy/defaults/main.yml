@@ -1,4 +1,5 @@
 ---
+nginx_proxy_stream_enabled: false
 nginx_proxy_configs: []
 ## Below is demonstration of possible keys and values.  Not all values are required.
 ## The goal is to keep it as flat as possible, so there are when clauses in the

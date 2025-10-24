@@ -1,0 +1,22 @@
+---
+- name: Ensure InvokeAI Directory Exists
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/invokeai
+    state: "directory"
+    mode: "0755"
+
+- name: Install Docker Compose File
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /home/{{ ansible_user }}/invokeai/docker-compose.yml
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: Restart InvokeAI Compose
+
+- name: Start Docker Compose Service
+  community.docker.docker_compose_v2:
+    project_src: /home/{{ ansible_user }}/invokeai
+    pull: always
+    state: present
+    remove_orphans: true
