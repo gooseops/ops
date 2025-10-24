@@ -1,0 +1,6 @@
+---
+- name: Synapse Role
+  ansible.builtin.import_tasks: ubuntu-synapse.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - synapse

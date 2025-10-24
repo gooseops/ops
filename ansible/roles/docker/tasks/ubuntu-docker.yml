@@ -47,14 +47,15 @@
         - docker
         - apt-packages
 
-- name: ubuntu-docker | Configure Docker Logging
+- name: ubuntu-docker | Configure Docker Daemon
   become: true
   ansible.builtin.copy:
-    src: daemon.json
+    content: "{{ docker_config_daemon_json }}"
     dest: /etc/docker/daemon.json
     owner: root
     group: root
     mode: "0644"
+  notify: Restart Docker
 
 - name: ubuntu-docker | Add user to docker group
   become: true

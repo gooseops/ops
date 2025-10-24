@@ -70,25 +70,25 @@
   ansible.builtin.template:
     src: lighthouse.service.j2
     dest: /etc/systemd/system/lighthouse.service
+  notify: Restart Lighthouse
 
 - name: Create reth systemd service file
   become: true
   ansible.builtin.template:
     src: reth.service.j2
     dest: /etc/systemd/system/reth.service
+  notify: Restart Reth
 
-- name: Restart reth
+- name: Ensure Reth Is Running
   become: true
   ansible.builtin.systemd:
-    daemon_reload: true
     name: reth
     enabled: true
-    state: restarted
+    state: started
 
-- name: Restart Lighthouse
+- name: Ensure Lighthouse Is Running
   become: true
   ansible.builtin.systemd:
-    daemon_reload: true
     name: lighthouse
     enabled: true
-    state: restarted
+    state: started

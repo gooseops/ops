@@ -1,0 +1,10 @@
+
+services:
+  coturn:
+    image: coturn/coturn:{{ coturn_version }}
+    container_name: coturn
+    network_mode: "host"
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf
+    tmpfs:
+      - /var/lib/coturn

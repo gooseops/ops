@@ -1,2 +1,1 @@
----
-ansible_distribution_release: "{{ ansible_distribution_release | default('noble') }}"
+nginx_base_apt_repo_enabled: false

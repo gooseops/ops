@@ -1,8 +1,10 @@
 ---
-- name: Ollama
-  hosts: llm
+- name: AI Studio
+  hosts: ai_studio
   roles:
     - role: docker
+    - role: nvidia
+    - role: invokeai
     - role: ollama
     - role: cloudflare-tunnel
     - role: swap

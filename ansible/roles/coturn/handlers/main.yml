@@ -1,0 +1,8 @@
+---
+- name: Restart Coturn
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: coturn-docker
+    enabled: true
+    state: restarted

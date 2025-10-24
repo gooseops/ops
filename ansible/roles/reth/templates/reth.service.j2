@@ -6,6 +6,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart={{ bin_inst_path }}/reth node \
+            --full \
             --chain={{ network }} \
             --datadir={{ reth_data_dir }} \
             --http \
@@ -17,8 +18,7 @@ ExecStart={{ bin_inst_path }}/reth node \
             --ws.origins=* \
             --ws.api="debug,eth,net,web3,rpc" \
             --metrics {{ ansible_host }}:9001 \
-            --authrpc.jwtsecret={{ reth_data_dir }}/jwtsecret \
-            --full
+            --authrpc.jwtsecret={{ reth_data_dir }}/jwtsecret
 
 Restart=always
 

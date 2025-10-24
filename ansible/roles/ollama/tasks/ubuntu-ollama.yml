@@ -1,26 +1,4 @@
 ---
-- name: Install dependencies
-  become: true
-  ansible.builtin.apt:
-    pkg:
-      - curl
-    state: present
-    update_cache: true
-
-- name: Check for nvidia-smi
-  ansible.builtin.stat:
-    path: /usr/bin/nvidia-smi
-  register: nvidia_smi
-
-- name: Install Nvidia Drivers
-  become: true
-  when: not nvidia_smi.stat.exists
-  block:
-    - name: Install Nvidia Drivers | Server Drivers
-      ansible.builtin.command: ubuntu-drivers install --gpgpu
-    - name: Install Nvidia Drivers | Common Drivers
-      ansible.builtin.command: ubuntu-drivers install
-
 - name: Install Ollama
   become: true
   ansible.builtin.shell:

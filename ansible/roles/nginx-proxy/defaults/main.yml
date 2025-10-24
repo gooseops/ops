@@ -1,10 +1,31 @@
 ---
-ssl_enabled: false
-domain: example.com
-email: test@example.com
-app_port: 8080
-reject_non_dns_traffic: false
-enable_rate_limit: true
-crt_type: "" # letsencrypt or private
-tls_crt: ""
-tls_key: ""
+nginx_proxy_stream_enabled: false
+nginx_proxy_configs: []
+## Below is demonstration of possible keys and values.  Not all values are required.
+## The goal is to keep it as flat as possible, so there are when clauses in the
+## playbook that check to see if certain variables are defined before attempting
+## to run plays.
+  # - nginx_proxy_config_name: "foobar"
+  #   nginx_proxy_tls_enabled: false
+  #   nginx_proxy_domain: foobar.example.com
+  #   nginx_proxy_email: test@example.com
+  #   nginx_proxy_crt_type: "" # letsencrypt or private
+  #   nginx_proxy_tls_crt: ""
+  #   nginx_proxy_tls_key: ""
+  #   nginx_proxy_http_server: |
+  #     server {
+  #         listen 80;
+  #         server_name {{ nginx_proxy_domain }};
+  #         return 301 https://{{ nginx_proxy_domain }}$request_uri;
+  #     }
+  #   nginx_proxy_stream_server: |
+  #     upstream foobar_backend {
+  #         server 10.255.255.1:55555;
+  #     }
+
+  #     server {
+  #         listen 55555 udp;
+  #         proxy_pass foobar_backend;
+  #         proxy_timeout 3s;
+  #         proxy_connect_timeout 1s;
+  #     }

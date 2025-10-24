@@ -1,106 +1,48 @@
 ---
-- name: Use LetsEncrypt Cert
+- name: Nginx Proxy | Full Package
+  when: nginx_proxy_stream_enabled
   become: true
-  when: crt_type == "letsencrypt"
   block:
-    - name: Obtain SSL certificates using Certbot
-      ansible.builtin.command: certbot certonly --nginx -d {{ domain }} --non-interactive --agree-tos --email {{ email }}
-      become: true
-      when: ssl_enabled
-      notify: Restart Nginx
-
-    - name: Configure NGINX as a reverse proxy
-      ansible.builtin.template:
-        src: nginx.conf.j2
-        dest: /etc/nginx/sites-available/{{ domain }}
-      become: true
-
-    - name: Enable NGINX site configuration
+    - name: Nginx Proxy | Full Package | Stream Directory
       ansible.builtin.file:
-        src: /etc/nginx/sites-available/{{ domain }}
-        dest: /etc/nginx/sites-enabled/{{ domain }}
-        state: link
-      become: true
-
-    - name: Implement Rate Limit
-      become: true
-      ansible.builtin.lineinfile:
-        path: /etc/nginx/nginx.conf
-        insertafter: "^        server_tokens off;"
-        line: "        limit_req_zone $binary_remote_addr zone=one:10m rate=3r/s;"
-      notify: Restart Nginx
-
-    - name: Remove default NGINX configuration if present
-      become: true
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /etc/nginx/sites-enabled/default
-        - /etc/nginx/conf.d/default.conf
-      notify: Restart Nginx
-
-- name: Use Private Cert
-  become: true
-  when: crt_type == "private"
-  block:
-    - name: Ensure SSL certs directory exists
-      ansible.builtin.file:
-        path: /etc/nginx/tls/certs
+        path: /etc/nginx/conf.d/stream
         state: directory
-        mode: '0755'
-        owner: www-data
-        group: www-data
+        mode: "0755"
+        owner: root
+        group: root
 
-    - name: Ensure SSL private directory exists
-      ansible.builtin.file:
-        path: /etc/nginx/tls/private
-        state: directory
-        mode: '0755'
-        owner: www-data
-        group: www-data
-
-    - name: Write SSL certificate to file
-      ansible.builtin.copy:
-        content: "{{ tls_crt }}"
-        dest: /etc/nginx/tls/certs/{{ domain }}.crt
-        mode: '0600'
-        owner: www-data
-        group: www-data
-
-    - name: Write SSL private key to file
-      ansible.builtin.copy:
-        content: "{{ tls_key }}"
-        dest: /etc/nginx/tls/private/{{ domain }}.key
-        mode: '0600'
-        owner: www-data
-        group: www-data
-
-    - name: Configure Nginx for BYO Certificate
-      ansible.builtin.template:
-        src: nginx.conf.j2
-        dest: /etc/nginx/sites-available/{{ domain }}
-
-    - name: Enable Nginx site configuration
-      ansible.builtin.file:
-        src: /etc/nginx/sites-available/{{ domain }}
-        dest: /etc/nginx/sites-enabled/{{ domain }}
-        state: link
-
-    - name: Remove default NGINX configuration
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /etc/nginx/sites-enabled/default
-        - /etc/nginx/conf.d/default.conf
+    - name: Nginx Proxy | Full Package | Package
+      ansible.builtin.apt:
+        update_cache: true
+        state: latest
+        pkg:
+          - nginx-full
       notify: Restart Nginx
 
-  rescue:
-    - name: Fail if BYO cert is missing
-      ansible.builtin.fail:
-        msg: "BYO certificate or key is missing. Set SSL_CERT_CONTENT and SSL_KEY_CONTENT environment variables."
+    - name: Nginx Proxy | Full Package | Config
+      ansible.builtin.copy:
+        src: stream.conf
+        dest: /etc/nginx/conf.d/stream.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart Nginx
 
-- name: Test NGINX configuration
+- name: Nginx Proxy | Ensure Private TLS Directories Exist
   become: true
-  ansible.builtin.command: nginx -t
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: www-data
+    group: www-data
+  loop:
+    - /etc/nginx/tls/certs
+    - /etc/nginx/tls/private
+
+- name: Nginx Proxy | Write Configs From Loop
+  include_tasks: ubuntu-nginx-proxy-configs.yml
+  loop: "{{ nginx_proxy_configs }}"
+  loop_control:
+    loop_var: item
+  no_log: true

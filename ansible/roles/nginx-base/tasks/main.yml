@@ -1,5 +1,5 @@
 ---
-- name: Configure nginx
+- name: Nginx Base Role
   ansible.builtin.import_tasks: ubuntu-nginx-base.yml
   when: ansible_facts['os_family'] == "Debian"
   tags:

@@ -1,0 +1,8 @@
+---
+synapse_dir: "/etc/matrix-synapse"
+synapse_config_dir: "{{ synapse_dir }}/conf.d"
+synapse_domain: "matrix.example.com"
+synapse_postgresql_username: "example-user"
+synapse_postgresql_userpass: "example-password"
+synapse_postgresql_db_host: "example-host"
+synapse_postgresql_db_name: "example-database"

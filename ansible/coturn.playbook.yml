@@ -1,0 +1,11 @@
+---
+- name: Coturn
+  hosts: coturn
+  roles:
+    - role: coturn
+    - role: docker
+    - role: nginx-base
+    # - role: nginx-proxy
+    # - role: swap
+    #   vars:
+    #     swapfile_size: 2G

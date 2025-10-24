@@ -6,7 +6,7 @@ After=network.target reth.service
 [Service]
 Type=simple
 ExecStart={{ bin_inst_path }}/lighthouse bn \
-            --checkpoint-sync-url https://hoodi-checkpoint-sync.stakely.io \
+            --checkpoint-sync-url {{ reth_lighthouse_checkpoint_sync_url }} \
             --metrics \
             --metrics-address {{ ansible_host }} \
             --metrics-port 5064 \
@@ -14,7 +14,6 @@ ExecStart={{ bin_inst_path }}/lighthouse bn \
             --network {{ network }} \
             --execution-endpoints http://127.0.0.1:8551 \
             --execution-jwt "{{ reth_data_dir }}/jwtsecret" \
-            --disable-deposit-contract-sync \
             --disable-light-client-server
 
 Restart=always

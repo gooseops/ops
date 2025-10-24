@@ -1,0 +1,6 @@
+---
+- name: InvokeAI Role
+  ansible.builtin.import_tasks: ubuntu-invokeai.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - invoke-ai

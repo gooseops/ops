@@ -1,0 +1,6 @@
+---
+- name: Postgresql
+  hosts: postgresql
+  roles:
+    - role: postgresql
+    - role: swap

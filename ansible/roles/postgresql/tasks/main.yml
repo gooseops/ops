@@ -1,0 +1,6 @@
+---
+- name: Postgresql Role
+  ansible.builtin.import_tasks: ubuntu-postgresql.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - postgresql
