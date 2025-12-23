@@ -1,6 +1,6 @@
 ---
-- name: Hoodi
-  hosts: hoodi
+- name: Reth
+  hosts: hoodi_reth
   roles:
     - role: reth
     - role: swap

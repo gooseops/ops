@@ -1,0 +1,57 @@
+---
+- name: Ensure required dependencies are installed
+  become: true
+  ansible.builtin.apt:
+    name:
+      - curl
+      - tar
+    state: present
+    update_cache: yes
+
+## Todo only run if lighthouse version changed
+- name: Download and extract Lighthouse Consensus Client
+  become: true
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: "https://github.com/sigp/lighthouse/releases/download/{{ lighthouse_version }}/lighthouse-{{ lighthouse_version }}-x86_64-unknown-linux-gnu.tar.gz"
+    dest: "{{ lighthouse_bin_inst_path }}"
+  notify: Restart Lighthouse
+
+- name: Add App bin path to PATH variable
+  ansible.builtin.blockinfile:
+    path: /home/{{ ansible_user }}/.bashrc
+    block: |
+      # Add app bin path to PATH variable
+      export PATH=$PATH:/usr/local/bin
+    marker: "# {mark} ANSIBLE MANAGED BIN PATH"
+
+- name: Create data directory for Lighthouse
+  become: true
+  file:
+    path: "{{ lighthouse_data_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Store JWT Secret
+  become: true
+  ansible.builtin.copy:
+    content: "{{ lighthouse_jwt_secret }}"
+    dest: "{{ lighthouse_data_dir }}/jwtsecret"
+  notify: Restart Lighthouse
+
+- name: Create Lighthouse systemd service file
+  become: true
+  ansible.builtin.template:
+    src: lighthouse.service.j2
+    dest: /etc/systemd/system/lighthouse.service
+  notify: Restart Lighthouse
+
+- name: Ensure Lighthouse is Started and Enabled
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: lighthouse
+    enabled: yes
+    state: started

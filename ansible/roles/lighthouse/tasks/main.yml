@@ -1,0 +1,6 @@
+
+- name: Configure Lighthouse
+  import_tasks: ubuntu-lighthouse.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - lighthouse

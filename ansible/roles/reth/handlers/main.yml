@@ -5,11 +5,3 @@
     name: reth
     enabled: true
     state: restarted
-
-- name: Restart Lighthouse
-  become: true
-  ansible.builtin.systemd:
-    daemon_reload: true
-    name: lighthouse
-    enabled: true
-    state: restarted

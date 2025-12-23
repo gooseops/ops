@@ -2,10 +2,12 @@
 - name: Run vaultwarden container
   community.docker.docker_container:
     name: vaultwarden
-    image: vaultwarden/server:1.31.0
+    image: "vaultwarden/server:{{ vaultwarden_version }}"
+    env:
+      DATABASE_URL: "{{ vaultwarden_database_url }}"
     restart_policy: unless-stopped
     state: started
     published_ports:
-      - "{{ app_port }}:80"
+      - "{{ vaultwarden_container_port }}:80"
     volumes:
       - /vw-data/:/data/

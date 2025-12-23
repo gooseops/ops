@@ -1,0 +1,6 @@
+---
+- name: Hugo Role
+  ansible.builtin.import_tasks: ubuntu-hugo.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - hugo

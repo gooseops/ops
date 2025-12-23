@@ -1,0 +1,6 @@
+---
+- name: Hugo
+  hosts: hugo
+  roles:
+    - role: hugo
+    # - role: swap

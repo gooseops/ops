@@ -4,13 +4,6 @@
   ansible.builtin.apt:
     name:
       - curl
-      - wget
-      - build-essential
-      - clang
-      - pkg-config
-      - libssl-dev
-      - jq
-      - git
       - tar
       - unzip
     state: present
@@ -23,15 +16,7 @@
     remote_src: true
     src: "https://github.com/paradigmxyz/reth/releases/download/{{ reth_version }}/reth-{{ reth_version }}-x86_64-unknown-linux-gnu.tar.gz"
     list_files: true
-    dest: "{{ bin_inst_path }}"
-
-## Todo only run if lighthouse version changed
-- name: Download and extract Lighthouse Consensus Client
-  become: true
-  ansible.builtin.unarchive:
-    remote_src: true
-    src: "https://github.com/sigp/lighthouse/releases/download/{{ lighthouse_version }}/lighthouse-{{ lighthouse_version }}-x86_64-unknown-linux-gnu.tar.gz"
-    dest: "{{ bin_inst_path }}"
+    dest: "{{ reth_bin_inst_path }}"
 
 - name: Add App bin path to PATH variable
   ansible.builtin.blockinfile:
@@ -40,15 +25,6 @@
       # Add app bin path to PATH variable
       export PATH=$PATH:/usr/local/bin
     marker: "# {mark} ANSIBLE MANAGED BIN PATH"
-
-- name: Create data directory for Lighthouse
-  become: true
-  ansible.builtin.file:
-    path: "{{ lighthouse_data_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
 
 - name: Create data directory for Reth
   become: true
@@ -65,13 +41,6 @@
     content: "{{ reth_jwt_secret }}"
     dest: "{{ reth_data_dir }}/jwtsecret"
 
-- name: Create Lighthouse systemd service file
-  become: true
-  ansible.builtin.template:
-    src: lighthouse.service.j2
-    dest: /etc/systemd/system/lighthouse.service
-  notify: Restart Lighthouse
-
 - name: Create reth systemd service file
   become: true
   ansible.builtin.template:
@@ -83,12 +52,5 @@
   become: true
   ansible.builtin.systemd:
     name: reth
-    enabled: true
-    state: started
-
-- name: Ensure Lighthouse Is Running
-  become: true
-  ansible.builtin.systemd:
-    name: lighthouse
     enabled: true
     state: started
