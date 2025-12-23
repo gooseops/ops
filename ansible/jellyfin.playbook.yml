@@ -3,4 +3,6 @@
   hosts: jellyfin
   roles:
     - role: jellyfin
+    - role: nginx-base
+    - role: nginx-proxy
     - role: swap

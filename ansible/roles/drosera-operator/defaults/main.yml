@@ -5,7 +5,7 @@ bin_inst_path: "/usr/local/bin"
 ## Operator
 drosera_address: ""
 dev_mode: "false"
-db_file_path: ""
+data_dir: ""
 block_polling_interval_ms: "5000"
 listen_address: "0.0.0.0"
 eth_rpc_url: ""

@@ -1,0 +1,22 @@
+[Unit]
+Description=Service for Lighthouse Consensus Client
+Requires=network.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ lighthouse_bin_inst_path }}/lighthouse bn \
+            --checkpoint-sync-url {{ lighthouse_checkpoint_sync_url }} \
+            --metrics \
+            --metrics-address {{ ansible_host }} \
+            --metrics-port 5064 \
+            --datadir {{ lighthouse_data_dir }} \
+            --network {{ lighthouse_network }} \
+            --execution-endpoints {{ lighthouse_execution_endpoint }} \
+            --execution-jwt "{{ lighthouse_data_dir }}/jwtsecret" \
+            --disable-light-client-server
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

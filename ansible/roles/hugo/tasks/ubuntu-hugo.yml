@@ -1,0 +1,6 @@
+---
+- name: Hugo | Install Hugo .deb package
+  become: true
+  ansible.builtin.apt:
+    deb: "{{ hugo_deb_pkg_link }}"
+    update-cache: true

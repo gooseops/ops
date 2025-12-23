@@ -2,11 +2,12 @@
 services:
   invokeai:
     image: "ghcr.io/invoke-ai/invokeai:{{ invokeai_version }}"
+    container_name: invokeai
+    restart: unless-stopped
     environment:
       - INVOKEAI_PORT={{ invokeai_container_port }}
       - INVOKEAI_ROOT=/invokeai
       - HF_HOME=/invokeai/.cache/huggingface
-
     ports:
       - "{{ invokeai_host_port }}:{{ invokeai_container_port }}"
     volumes:

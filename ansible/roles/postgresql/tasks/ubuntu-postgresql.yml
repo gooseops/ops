@@ -97,7 +97,7 @@
       community.postgresql.postgresql_db:
         name: "{{ item.db_name }}"
         owner: "{{ item.db_user }}"
-        encoding: "{{ item.db_encoding }}"
+        encoding: "{{ item.db_encoding | default('') }}"
         lc_collate: "{{ item.db_lc_collate | default('') }}"
         lc_ctype: "{{ item.db_lc_ctype | default('') }}"
         state: present

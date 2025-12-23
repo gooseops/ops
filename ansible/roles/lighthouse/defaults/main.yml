@@ -1,0 +1,7 @@
+lighthouse_bin_inst_path: "/usr/local/bin"
+lighthouse_data_dir: "/var/lib/lighthouse"
+lighthouse_version: "v7.1.0"
+lighthouse_execution_endpoint: "localhost:8551"
+lighthouse_network: "mainnet"
+lighthouse_checkpoint_sync_url: "https://mainnet-checkpoint-sync.stakely.io/"
+lighthouse_jwt_secret: "example_secret"

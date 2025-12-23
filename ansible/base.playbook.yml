@@ -2,7 +2,7 @@
 - name: Base Configuration
   hosts: all
   pre_tasks:
-    - name: Base Configuration
+    - name: Base Configuration | Install System Packages
       become: true
       ansible.builtin.apt:
         name:

@@ -1,2 +1,5 @@
 ---
-app_port: "8080"
+vaultwarden_version: "1.34.3"
+vaultwarden_container_port: "8080"
+## See https://github.com/dani-garcia/vaultwarden/blob/main/.env.template for more information
+vaultwarden_database_url: ""
