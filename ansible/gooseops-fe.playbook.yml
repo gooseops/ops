@@ -2,5 +2,7 @@
 - name: GooseOps Website
   hosts: gooseops_fe
   roles:
+    - role: hugo
     - role: nginx-base
+    - role: nginx-proxy
     - role: cloudflare-tunnel

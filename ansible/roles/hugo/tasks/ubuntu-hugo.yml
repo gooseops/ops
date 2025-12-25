@@ -1,6 +1,55 @@
 ---
+- name: Hugo | Apt Packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - git
+
 - name: Hugo | Install Hugo .deb package
   become: true
   ansible.builtin.apt:
     deb: "{{ hugo_deb_pkg_link }}"
     update-cache: true
+
+- name: Hugo | Ensure hugo server directory exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ hugo_srv_dir }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Hugo | Ensure hugo source directory exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ hugo_source_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Hugo | Clone repository
+  ansible.builtin.git:
+    repo: "{{ hugo_repo_url }}"
+    dest: "{{ hugo_source_dir }}"
+    version: "{{ hugo_repo_branch }}"
+    force: true
+    update: true
+
+- name: Hugo | Build site
+  args:
+    chdir: "{{ hugo_source_dir }}"
+  ansible.builtin.command: |
+    hugo --minify
+  
+- name: Hugo | Copy public directory to server
+  become: true
+  ansible.builtin.copy:
+    src: "{{ hugo_public_dir }}"
+    dest: "{{ hugo_srv_dir }}"
+    owner: www-data
+    group: www-data
+    mode: "0755"
+    directory_mode: "0755"
+    remote_src: true
