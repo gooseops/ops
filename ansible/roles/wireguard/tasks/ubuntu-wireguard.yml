@@ -2,9 +2,10 @@
 - name: Install Packages
   become: true
   ansible.builtin.apt:
+    update_cache: true
+    state: latest
     pkg:
       - wireguard
-    state: present
 
 - name: Ensure Wireguard Service is Stopped
   become: true
