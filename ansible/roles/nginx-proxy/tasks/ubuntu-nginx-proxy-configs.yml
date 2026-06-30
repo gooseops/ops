@@ -10,16 +10,12 @@
 - name: Nginx Proxy | Write Configs From Loop | Private Cert
   when: item.nginx_proxy_crt_type is defined and item.nginx_proxy_crt_type == "private"
   become: true
-  rescue:
-    - name: Nginx Proxy | Write Configs From Loop | Private Cert | Fail if BYO cert is missing
-      ansible.builtin.fail:
-        msg: "BYO certificate or key is missing. Set `nginx_proxy_tls_crt` and `nginx_proxy_tls_key` role variables."
   block:
     - name: Nginx Proxy | Write Configs From Loop | Private Cert | Write TLS Certificate
       ansible.builtin.copy:
         content: "{{ item.nginx_proxy_tls_crt }}"
         dest: /etc/nginx/tls/certs/{{ item.nginx_proxy_domain }}.crt
-        mode: '0600'
+        mode: "0600"
         owner: www-data
         group: www-data
 
@@ -27,10 +23,14 @@
       ansible.builtin.copy:
         content: "{{ item.nginx_proxy_tls_key }}"
         dest: /etc/nginx/tls/private/{{ item.nginx_proxy_domain }}.key
-        mode: '0600'
+        mode: "0600"
         owner: www-data
         group: www-data
 
+  rescue:
+    - name: Nginx Proxy | Write Configs From Loop | Private Cert | Fail if BYO cert is missing
+      ansible.builtin.fail:
+        msg: "BYO certificate or key is missing. Set `nginx_proxy_tls_crt` and `nginx_proxy_tls_key` role variables."
 - name: Nginx Proxy | Write Configs From Loop | HTTP Servers
   when: item.nginx_proxy_http_server is defined
   become: true

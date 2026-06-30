@@ -2,7 +2,7 @@
 - name: Synapse Role | System Dependencies
   become: true
   ansible.builtin.apt:
-    update_cache: yes
+    update_cache: true
     name:
       - apt-transport-https
       - curl
@@ -33,7 +33,7 @@
 
     - name: Synapse Role | Install | Synapse package
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
         name:
           - matrix-synapse-py3
 

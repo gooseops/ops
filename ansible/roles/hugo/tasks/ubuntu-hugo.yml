@@ -42,7 +42,7 @@
     chdir: "{{ hugo_source_dir }}"
   ansible.builtin.command: |
     hugo --minify
-  
+
 - name: Hugo | Copy public directory to server
   become: true
   ansible.builtin.copy:

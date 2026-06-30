@@ -1,0 +1,6 @@
+---
+- name: Restart Mattermost
+  become: true
+  ansible.builtin.service:
+    name: mattermost
+    state: restarted

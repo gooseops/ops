@@ -5,6 +5,6 @@
     - role: docker
     - role: nvidia
     - role: invokeai
-    - role: ollama
+    - role: open-webui
     - role: cloudflare-tunnel
     - role: swap

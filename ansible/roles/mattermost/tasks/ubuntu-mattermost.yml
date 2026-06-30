@@ -1,0 +1,57 @@
+---
+- name: Ubuntu Mattermost | Apt packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+    state: present
+    update-cache: true
+
+- name: Ubuntu Mattermost | Create Keyrings Directory
+  become: true
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Ubuntu Mattermost | Download GPG Key
+  ansible.builtin.shell: |
+    curl -sL -o- https://deb.packages.mattermost.com/pubkey.gpg |  gpg --dearmor | sudo tee /usr/share/keyrings/mattermost-archive-keyring.gpg > /dev/null
+  args:
+    creates: /usr/share/keyrings/mattermost-archive-keyring.gpg
+
+- name: Ubuntu Mattermost | Mattermost Apt Repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/mattermost-archive-keyring.gpg] https://deb.packages.mattermost.com {{ ansible_distribution_release }} main"
+    state: present
+    update_cache: true
+    filename: mattermost
+
+- name: Ubuntu Mattermost | Mattermost Apt Package
+  become: true
+  ansible.builtin.apt:
+    name:
+      - mattermost
+    state: present
+    update-cache: true
+  notify: Restart Mattermost
+
+- name: Ubuntu Mattermost | Configure Mattermost
+  become: true
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: /opt/mattermost/config/config.json
+    mode: "0600"
+    owner: mattermost
+    group: mattermost
+  notify: Restart Mattermost
+
+- name: Ubuntu Mattermost | Start and Enable Mattermost Service
+  become: true
+  ansible.builtin.service:
+    name: mattermost
+    state: started
+    daemon_reload: true
+    enabled: true

@@ -1,0 +1,50 @@
+---
+- name: HiveCraft Website
+  hosts: hivecraft_web
+  roles:
+    - role: nginx-base
+    - role: nginx-proxy
+    - role: cloudflare-tunnel
+  tasks:
+    - name: Install git
+      become: true
+      ansible.builtin.apt:
+        name: git
+        state: present
+
+    - name: Clone hivecraft-web repository
+      ansible.builtin.git:
+        repo: "{{ hivecraft_web_repo_url }}"
+        dest: "{{ hivecraft_web_github_dir }}"
+        version: "{{ hivecraft_web_repo_branch }}"
+        force: true
+        update: true
+
+    - name: Find all web files in tmp repo
+      ansible.builtin.find:
+        paths: "{{ hivecraft_web_github_pub_dir }}"
+        file_type: file
+        recurse: true
+      register: file_results
+
+    - name: Create nginx web directory
+      become: true
+      ansible.builtin.file:
+        path: "{{ hivecraft_web_srv_dir }}"
+        state: directory
+        mode: "0755"
+        owner: www-data
+        group: www-data
+
+    - name: Copy static files to nginx web directory
+      become: true
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ hivecraft_web_srv_dir }}/{{ item.path | relpath(hivecraft_web_github_pub_dir) }}"
+        remote_src: true
+        mode: "0644"
+        owner: www-data
+        group: www-data
+      loop: "{{ file_results.files }}"
+      loop_control:
+        label: "{{ item.path | relpath(hivecraft_web_github_pub_dir) }}"

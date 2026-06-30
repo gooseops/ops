@@ -1,6 +1,6 @@
 ---
 - name: Debug Jellyfin repo configuration
-  debug:
+  ansible.builtin.debug:
     msg: |
       Jellyfin OS: {{ jellyfin_os }}
       Jellfyin Codename: {{ jellyfin_codename }}
@@ -45,7 +45,7 @@
       ansible.builtin.template:
         src: jellyfin.sources.j2
         dest: /etc/apt/sources.list.d/jellyfin.sources
-        mode: '0644'
+        mode: "0644"
 
     - name: Ubuntu Jellyfin | Install | Package
       ansible.builtin.apt:
@@ -60,4 +60,4 @@
         owner: jellyfin
         group: adm
         recurse: true
-        mode: '0755'
+        mode: "0755"

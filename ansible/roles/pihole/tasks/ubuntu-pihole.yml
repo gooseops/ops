@@ -4,7 +4,7 @@
   ansible.builtin.template:
     src: resolved.conf.j2
     dest: /etc/systemd/resolved.conf
-    mode: '0644'
+    mode: "0644"
   notify: Restart Systemd Resolved
 
 - name: Run Handlers
@@ -17,7 +17,7 @@
     state: directory
     owner: administrator
     group: administrator
-    mode: '0755'
+    mode: "0755"
 
 - name: Create Pihole Docker Compose Directory
   ansible.builtin.file:

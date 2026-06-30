@@ -184,5 +184,8 @@ cython_debug/
 # macOS
 .DS_Store
 
+# Opencode
+.opencode
+
 # Personal notes
 **NOTES.md

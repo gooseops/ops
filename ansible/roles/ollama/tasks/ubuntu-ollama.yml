@@ -5,6 +5,13 @@
     cmd: curl -fsSL https://ollama.com/install.sh | sh
     creates: /usr/local/bin/ollama
 
+- name: Install Ollama Systemd Unit File
+  become: true
+  ansible.builtin.template:
+    src: ollama.service.j2
+    dest: /etc/systemd/system/ollama.service
+  notify: Restart Ollama
+
 - name: Ensure Ollama Daemon is Running
   become: true
   ansible.builtin.systemd:
@@ -12,31 +19,3 @@
     daemon_reload: true
     enabled: true
     state: started
-
-- name: Ensure OpenWebUI Directory Exists
-  ansible.builtin.file:
-    path: /home/{{ ansible_user }}/open_webui
-    state: "directory"
-    mode: "0755"
-
-- name: Install Docker Compose File
-  ansible.builtin.template:
-    src: docker-compose.yml.j2
-    dest: /home/{{ ansible_user }}/open_webui/docker-compose.yml
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: "0644"
-
-- name: Stop Docker Compose Service
-  community.docker.docker_compose_v2:
-    project_src: /home/{{ ansible_user }}/open_webui
-    pull: always
-    state: stopped
-    remove_orphans: true
-
-- name: Start Docker Compose Service
-  community.docker.docker_compose_v2:
-    project_src: /home/{{ ansible_user }}/open_webui
-    pull: always
-    state: present
-    remove_orphans: true

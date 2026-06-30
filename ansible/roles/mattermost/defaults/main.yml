@@ -1,0 +1,5 @@
+---
+mattermost_site_url: ""
+mattermost_sql_drivername: "postgres"
+mattermost_sql_datasource: ""
+mattermost_support_email: ""
