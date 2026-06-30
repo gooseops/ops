@@ -1,9 +1,7 @@
 ---
-version: "3.9"
-
 services:
   nextcloud:
-    image: nextcloud/all-in-one:latest
+    image: nextcloud/all-in-one:{{ nextcloud_version }}
     container_name: nextcloud-aio-mastercontainer
     restart: always
     init: true

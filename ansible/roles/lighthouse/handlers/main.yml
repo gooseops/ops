@@ -2,7 +2,7 @@
 - name: Restart Lighthouse
   become: true
   ansible.builtin.systemd:
-    daemon_reload: yes
+    daemon_reload: true
     name: lighthouse
-    enabled: yes
+    enabled: true
     state: started

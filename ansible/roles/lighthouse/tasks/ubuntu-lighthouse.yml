@@ -6,7 +6,7 @@
       - curl
       - tar
     state: present
-    update_cache: yes
+    update_cache: true
 
 ## Todo only run if lighthouse version changed
 - name: Download and extract Lighthouse Consensus Client
@@ -27,12 +27,12 @@
 
 - name: Create data directory for Lighthouse
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ lighthouse_data_dir }}"
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Store JWT Secret
   become: true
@@ -51,7 +51,7 @@
 - name: Ensure Lighthouse is Started and Enabled
   become: true
   ansible.builtin.systemd:
-    daemon_reload: yes
+    daemon_reload: true
     name: lighthouse
-    enabled: yes
+    enabled: true
     state: started

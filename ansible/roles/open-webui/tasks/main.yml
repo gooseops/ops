@@ -1,0 +1,6 @@
+---
+- name: Open WebUI Role
+  ansible.builtin.import_tasks: ubuntu-open-webui.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - open_webui

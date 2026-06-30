@@ -13,14 +13,20 @@
     path: /usr/bin/nvidia-smi
   register: nvidia_smi
 
-- name: Nvidia Role | Install Nvidia Drivers
+- name: Install NVIDIA driver
   become: true
-  when: not nvidia_smi.stat.exists
-  block:
-    - name: Install Nvidia Drivers | Server Drivers
-      ansible.builtin.command: ubuntu-drivers install --gpgpu
-    - name: Install Nvidia Drivers | Common Drivers
-      ansible.builtin.command: ubuntu-drivers install
+  ansible.builtin.apt:
+    name: nvidia-driver-590
+    state: present
+
+    # - name: Nvidia Role | Install Nvidia Drivers
+    #   become: true
+    #   when: not nvidia_smi.stat.exists
+    #   block:
+    #     - name: Install Nvidia Drivers | Server Drivers
+    #       ansible.builtin.command: ubuntu-drivers install --gpgpu
+    # - name: Install Nvidia Drivers | Common Drivers
+    #   ansible.builtin.command: ubuntu-drivers install
 
 - name: Nvidia Role | Install Nvidia Container Toolkit
   when: nvidia_container_toolkit_enabled

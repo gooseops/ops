@@ -1,3 +1,4 @@
+---
 jellyfin_codename_map:
   ubuntu:
     "20.04": "focal"

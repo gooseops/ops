@@ -1,3 +1,4 @@
+---
 jitsi_domain: "meet.example.com"
 jitsi_email: "john@example.com"
 jitsi_crt_file: "/etc/letsencrypt/live/{{ jitsi_domain }}/fullchain.pem"

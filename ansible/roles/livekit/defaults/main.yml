@@ -1,3 +1,4 @@
+---
 livekit_dir: "/opt/livekit"
 livekit_version: "v1.9.1"
 livekit_egress_version: "v1.10.0"

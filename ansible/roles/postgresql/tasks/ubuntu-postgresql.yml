@@ -2,7 +2,7 @@
 - name: Postgresql Role | System Dependencies
   become: true
   ansible.builtin.apt:
-    update_cache: yes
+    update_cache: true
     name:
       - ca-certificates
       - curl
@@ -33,7 +33,7 @@
 
     - name: Postgresql Role | Install | Postgresql package
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
         name:
           - postgresql-{{ postgresql_version }}
 
@@ -41,7 +41,7 @@
       ansible.builtin.systemd:
         name: postgresql
         state: started
-        enabled: yes
+        enabled: true
 
 - name: Postgresql Role | Configure
   become: true
@@ -49,7 +49,7 @@
     - name: Postgresql Role | Configure | PostgreSQL Listen Interfaces
       ansible.builtin.lineinfile:
         path: "{{ postgresql_conf_path }}"
-        regexp: '^listen_addresses'
+        regexp: "^listen_addresses"
         line: "listen_addresses = '{{ postgresql_listen_addresses | join(',') }}'"
       notify: Restart Postgresql
 

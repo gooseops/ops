@@ -41,7 +41,7 @@
     - /etc/nginx/tls/private
 
 - name: Nginx Proxy | Write Configs From Loop
-  include_tasks: ubuntu-nginx-proxy-configs.yml
+  ansible.builtin.include_tasks: ubuntu-nginx-proxy-configs.yml
   loop: "{{ nginx_proxy_configs }}"
   loop_control:
     loop_var: item

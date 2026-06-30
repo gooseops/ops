@@ -25,10 +25,10 @@
 # WARNING: if you're exposing Penpot to the internet, you should remove the flags
 # 'disable-secure-session-cookies' and 'disable-email-verification'
 x-flags: &penpot-flags
-  PENPOT_FLAGS: enable-smtp enable-prepl-server
+  PENPOT_FLAGS: disable-email-verification enable-smtp enable-prepl-server
 
 x-uri: &penpot-public-uri
-  PENPOT_PUBLIC_URI: http://localhost:9001
+  PENPOT_PUBLIC_URI: ${PENPOT_PUBLIC_URI}
 
 x-body-size: &penpot-http-body-size
   # Max body size (30MiB); Used for plain requests, should never be
@@ -37,6 +37,16 @@ x-body-size: &penpot-http-body-size
 
   # Max multipart body size (350MiB)
   PENPOT_HTTP_SERVER_MAX_MULTIPART_BODY_SIZE: 367001600
+
+## Penpot SECRET KEY. It serves as a master key from which other keys for subsystems
+## (eg http sessions, or invitations) are derived.
+##
+## We recommend to use a trully randomly generated
+## 512 bits base64 encoded string here. You can generate one with:
+##
+## python3 -c "import secrets; print(secrets.token_urlsafe(64))"
+x-secret-key: &penpot-secret-key
+  PENPOT_SECRET_KEY: ${PENPOT_SECRET_KEY}
 
 networks:
   penpot:
@@ -86,7 +96,7 @@ services:
     networks:
       - penpot
 
-    # labels:
+      # labels:
       # - "traefik.enable=true"
 
       # ## HTTPS: example of labels for the case where penpot will be exposed to the
@@ -98,8 +108,7 @@ services:
       # - "traefik.http.routers.penpot-https.tls=true"
 
     environment:
-      << : [*penpot-flags, *penpot-http-body-size]
-
+      <<: [*penpot-flags, *penpot-http-body-size]
   penpot-backend:
     image: "penpotapp/backend:${PENPOT_VERSION:-latest}"
     restart: always
@@ -119,26 +128,7 @@ services:
     ## Configuration envronment variables for the backend container.
 
     environment:
-      <<: [*penpot-flags, *penpot-public-uri, *penpot-http-body-size]
-      ## Penpot SECRET KEY. It serves as a master key from which other keys for subsystems
-      ## (eg http sessions, or invitations) are derived.
-      ##
-      ## If you leave it commented, all created sessions and invitations will
-      ## become invalid on container restart.
-      ##
-      ## If you going to uncomment this, we recommend to use a trully randomly generated
-      ## 512 bits base64 encoded string here.  You can generate one with:
-      ##
-      ## python3 -c "import secrets; print(secrets.token_urlsafe(64))"
-
-      # PENPOT_SECRET_KEY: my-insecure-key
-
-      ## The PREPL host. Mainly used for external programatic access to penpot backend
-      ## (example: admin). By default it will listen on `localhost` but if you are going to use
-      ## the `admin`, you will need to uncomment this and set the host to `0.0.0.0`.
-
-      # PENPOT_PREPL_HOST: 0.0.0.0
-
+      <<: [*penpot-flags, *penpot-public-uri, *penpot-http-body-size, *penpot-secret-key]
       ## Database connection parameters. Don't touch them unless you are using custom
       ## postgresql connection parameters.
 
@@ -154,17 +144,16 @@ services:
       ## Default configuration for assets storage: using filesystem based with all files
       ## stored in a docker volume.
 
-      PENPOT_ASSETS_STORAGE_BACKEND: assets-fs
-      PENPOT_STORAGE_ASSETS_FS_DIRECTORY: /opt/data/assets
+      PENPOT_OBJECTS_STORAGE_BACKEND: fs
+      PENPOT_OBJECTS_STORAGE_FS_DIRECTORY: /opt/data/assets
 
-      ## Also can be configured to to use a S3 compatible storage
-      ## service like MiniIO. Look below for minio service setup.
+      ## Also can be configured to to use a S3 compatible storage.
 
       # AWS_ACCESS_KEY_ID: <KEY_ID>
       # AWS_SECRET_ACCESS_KEY: <ACCESS_KEY>
-      # PENPOT_ASSETS_STORAGE_BACKEND: assets-s3
-      # PENPOT_STORAGE_ASSETS_S3_ENDPOINT: http://penpot-minio:9000
-      # PENPOT_STORAGE_ASSETS_S3_BUCKET: <BUKET_NAME>
+      # PENPOT_OBJECTS_STORAGE_BACKEND: s3
+      # PENPOT_OBJECTS_STORAGE_S3_ENDPOINT: <ENDPOINT>
+      # PENPOT_OBJECTS_STORAGE_S3_BUCKET: <BUKET_NAME>
 
       ## Telemetry. When enabled, a periodical process will send anonymous data about this
       ## instance. Telemetry data will enable us to learn how the application is used,
@@ -200,6 +189,7 @@ services:
       - penpot
 
     environment:
+      <<: *penpot-secret-key
       # Don't touch it; this uses an internal docker network to
       # communicate with the frontend.
       PENPOT_PUBLIC_URI: http://penpot-frontend:8080
@@ -258,22 +248,3 @@ services:
       - "1080:1080"
     networks:
       - penpot
-
-  ## Example configuration of MiniIO (S3 compatible object storage service); If you don't
-  ## have preference, then just use filesystem, this is here just for the completeness.
-
-  # minio:
-  #   image: "minio/minio:latest"
-  #   command: minio server /mnt/data --console-address ":9001"
-  #   restart: always
-  #
-  #   volumes:
-  #     - "penpot_minio:/mnt/data"
-  #
-  #   environment:
-  #     - MINIO_ROOT_USER=minioadmin
-  #     - MINIO_ROOT_PASSWORD=minioadmin
-  #
-  #   ports:
-  #     - 9000:9000
-  #     - 9001:9001

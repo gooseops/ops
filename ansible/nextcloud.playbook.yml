@@ -4,8 +4,8 @@
   roles:
     - role: docker
     - role: nextcloud
-    ## Todo: switch out tunnel role for nginx or other networking solution for compatibility
-    - role: cloudflare-tunnel
+    - role: nginx-base
+    - role: nginx-proxy
 
 ## After the ansible playbook runs and some containers have been set, we need these commands for adminstrative purposes.
 ## Might be able to run before initial setup

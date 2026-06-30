@@ -1,8 +1,8 @@
 ---
-- name: Restart Reth
+- name: Restart Ollama
   become: true
   ansible.builtin.systemd:
+    name: ollama
     daemon_reload: true
-    name: reth
     enabled: true
     state: restarted

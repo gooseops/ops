@@ -21,6 +21,10 @@
         mode: "0644"
 
     - name: Install Penpot | Deploy Penpot using Docker Compose
+      environment:
+        PENPOT_VERSION: "{{ penpot_version }}"
+        PENPOT_PUBLIC_URI: "{{ penpot_public_uri }}"
+        PENPOT_SECRET_KEY: "{{ penpot_secret_key }}"
       community.docker.docker_compose_v2:
         project_src: /opt/penpot
         state: present
