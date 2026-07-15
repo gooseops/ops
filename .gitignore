@@ -45,8 +45,14 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# terraform local worlds directory
-terraform/worlds/local
+# terraform worlds directory (symlinked from homecloud-infra)
+terraform/worlds
+
+# Local environment files (managed by `just setup`; never commit)
+.envs/
+
+# Per-environment SSH private keys (fetched from Doppler at setup time)
+.keys/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

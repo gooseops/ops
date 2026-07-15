@@ -1,0 +1,15 @@
+# Managed by Ansible (base role) — overrides only.
+# OpenSSH reads /etc/ssh/sshd_config.d/*.conf in lexical order;
+# first match wins on duplicate keys, so this snippet beats the stock file.
+
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+UsePAM yes
+X11Forwarding no
+AllowUsers {{ ansible_user }}
+MaxAuthTries 3
+LoginGraceTime 30
+ClientAliveInterval 300
+ClientAliveCountMax 2

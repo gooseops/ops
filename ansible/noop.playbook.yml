@@ -1,0 +1,14 @@
+---
+# Connectivity smoke test. Confirms each host is reachable, fact
+# gathering works, and the right user is in use. Makes no changes.
+# Default playbook for `just deploy` / `just check` when no playbook
+# argument is given.
+- name: Noop — connectivity check
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Noop | Report contact
+      ansible.builtin.debug:
+        msg: >
+          Reached {{ inventory_hostname }} ({{ ansible_host | default('no ansible_host') }})
+          as {{ ansible_user }} on {{ ansible_distribution }} {{ ansible_distribution_version }}.

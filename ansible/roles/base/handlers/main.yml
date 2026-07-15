@@ -1,0 +1,6 @@
+---
+- name: Reload sshd
+  become: true
+  ansible.builtin.systemd:
+    name: ssh
+    state: reloaded
