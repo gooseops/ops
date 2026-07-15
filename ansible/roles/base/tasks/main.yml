@@ -66,6 +66,15 @@
     - base
     - admin-user
 
+- name: Base | Verify sshd AllowUsers list is non-empty
+  ansible.builtin.assert:
+    that:
+      - base_ssh_allowed_users | length > 0
+    fail_msg: "base_ssh_allowed_users is empty — sshd would lock out every user."
+  tags:
+    - base
+    - ssh
+
 - name: Base | Drop sshd hardening snippet
   become: true
   ansible.builtin.template:
