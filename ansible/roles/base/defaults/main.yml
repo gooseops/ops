@@ -1,0 +1,7 @@
+---
+# Sourced from Doppler via group_vars/all.yml (which does the
+# lookup('env', 'ANSIBLE_SSH_PUBKEY')). Empty here on purpose — this is
+# a meaningless placeholder, not a real default; the assertion in
+# tasks/main.yml fails loud at play time if it's still empty rather
+# than silently writing an empty authorized_keys entry.
+base_admin_pubkey: ""

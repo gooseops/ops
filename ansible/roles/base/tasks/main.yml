@@ -1,0 +1,99 @@
+---
+- name: Base | Verify ansible_user is set (Doppler must be in the env)
+  ansible.builtin.assert:
+    that:
+      - ansible_user is defined
+      - ansible_user | length > 0
+    fail_msg: "ansible_user is empty — run via 'doppler run --command ansible-playbook ...' so ANSIBLE_USER is injected."
+  tags:
+    - base
+    - admin-user
+
+- name: Base | Verify admin pubkey is set (Doppler must be in the env)
+  ansible.builtin.assert:
+    that:
+      - base_admin_pubkey | length > 0
+    fail_msg: "base_admin_pubkey is empty — run via 'doppler run --command ansible-playbook ...' so ANSIBLE_SSH_PUBKEY is injected."
+  tags:
+    - base
+    - admin-user
+
+- name: Base | Ensure admin user exists
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    shell: /bin/bash
+    groups: sudo
+    append: true
+    create_home: true
+    state: present
+  tags:
+    - base
+    - admin-user
+
+- name: Base | Install authorized_keys for admin user
+  become: true
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ base_admin_pubkey }}"
+    exclusive: true
+    state: present
+  tags:
+    - base
+    - admin-user
+
+- name: Base | Drop sudoers entry for admin user (NOPASSWD)
+  become: true
+  ansible.builtin.template:
+    src: sudoers-admin.j2
+    dest: /etc/sudoers.d/10-admin
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+  tags:
+    - base
+    - admin-user
+
+# Must be the last admin-user task: NOPASSWD sudoers must already be in
+# place above, otherwise after locking we can no longer escalate.
+- name: Base | Lock admin user's password (key-only auth)
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    password_lock: true
+  tags:
+    - base
+    - admin-user
+
+- name: Base | Drop sshd hardening snippet
+  become: true
+  ansible.builtin.template:
+    src: sshd-base.conf.j2
+    dest: /etc/ssh/sshd_config.d/00-base.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload sshd
+  tags:
+    - base
+    - ssh
+
+# Runs after the snippet drop. If sshd -t rejects the merged config the
+# play stops here and the handler below never fires — daemon stays on
+# the old, working config and the existing SSH session keeps working.
+- name: Base | Validate sshd config (fail loud before reload)
+  become: true
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+  tags:
+    - base
+    - ssh
+
+# Force the reload to happen now, not at end-of-play, so any failure
+# surfaces while we still have logical context (and an unreloaded fallback).
+- name: Base | Apply sshd reload immediately
+  ansible.builtin.meta: flush_handlers
+  tags:
+    - base
+    - ssh
