@@ -5,3 +5,12 @@
 # tasks/main.yml fails loud at play time if it's still empty rather
 # than silently writing an empty authorized_keys entry.
 base_admin_pubkey: ""
+
+# Users allowed to SSH in (sshd's AllowUsers). Cluster-agnostic default:
+# just the admin user this role manages. Hosts with extra local accounts
+# needing SSH access override this in group_vars/host_vars (in
+# homecloud-infra, not here) with the full list — this default must
+# still include {{ ansible_user }} or you lock yourself out of the
+# admin account.
+base_ssh_allowed_users:
+  - "{{ ansible_user }}"

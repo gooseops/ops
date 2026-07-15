@@ -8,7 +8,7 @@ KbdInteractiveAuthentication no
 PubkeyAuthentication yes
 UsePAM yes
 X11Forwarding no
-AllowUsers {{ ansible_user }}
+AllowUsers {{ base_ssh_allowed_users | join(' ') }}
 MaxAuthTries 3
 LoginGraceTime 30
 ClientAliveInterval 300

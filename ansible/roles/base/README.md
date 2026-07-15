@@ -37,3 +37,10 @@ if the admin-user layer broke key-based auth first.
   exactly this key. Make sure the `ANSIBLE_SSH_PUBKEY`/`ANSIBLE_SSH_PRVKEY`
   Doppler secrets match the key already trusted on existing hosts before
   the first run, or you'll lock yourself out.
+- sshd's `AllowUsers` is driven by `base_ssh_allowed_users`, defaulting
+  to just `[ansible_user]` (`defaults/main.yml`). Hosts with extra local
+  accounts that need SSH access override this list in group_vars/
+  host_vars in `homecloud-infra` — never hardcode extra usernames into
+  the template or this role, since the account list is host-specific and
+  the inventory repo is where host-specific data belongs. A task-level
+  assertion fails loud if the resolved list is ever empty.
