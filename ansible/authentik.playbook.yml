@@ -1,0 +1,19 @@
+---
+- name: Authentik
+  hosts: authentik
+  roles:
+    - role: docker
+    - role: authentik
+    - role: nginx-base
+    - role: nginx-proxy
+
+## Authentik needs a reachable Postgres database + user before this play
+## will come up healthy — run the postgresql role against your shared DB
+## host separately (see postgresql.playbook.yml), with an "authentik"
+## entry added to that role's postgresql_databases/postgresql_users/
+## postgresql_hba_entries in your inventory repo's group_vars/postgresql.yml,
+## the same way synapse/vaultwarden/mattermost/odoo already do it.
+##
+## First login: the bootstrap admin is "akadmin", password from
+## authentik_bootstrap_password. Change it (or wire up your own identity
+## provider flow) after first login.

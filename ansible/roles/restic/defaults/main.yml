@@ -1,0 +1,55 @@
+---
+# ----------------------------------------------------------------- #
+# NFS mount (optional). Off by default — many hosts will already have
+# their backup target mounted some other way (fstab managed elsewhere,
+# a different role, host already has local disk). This role doesn't
+# assume it owns that; only enable this if you actually want this role
+# to manage the mount.
+# ----------------------------------------------------------------- #
+restic_nfs_mount_enabled: false
+restic_nfs_server: ""
+restic_nfs_export: ""
+restic_nfs_mount_path: "/mnt/restic-backups"
+restic_nfs_mount_options: "rw,sync,hard,intr"
+
+# ----------------------------------------------------------------- #
+# Backup jobs. One or more independent jobs, each with its own
+# repository, password, schedule, and retention policy — deliberately
+# not a single flat set of vars, since "what am I backing up, where,
+# how often, how long do I keep it" legitimately differs even for two
+# datasets on the same host (Terraform state and a database dump don't
+# want the same retention policy). Each job gets its own systemd
+# service+timer pair for the backup itself, plus a second service+timer
+# pair that runs `restic check` on a separate (usually longer) interval
+# — catches repository corruption before you desperately need a
+# restore, rather than finding out at restore time.
+#
+# Required per job: name, repository, password, paths (at least one).
+# Optional: excludes, on_calendar (default "daily"), check_on_calendar
+# (default "weekly"), keep_daily/keep_weekly/keep_monthly/keep_yearly
+# (defaults 7/4/6/1).
+#
+# restic_jobs:
+#   - name: terraform-state
+#     repository: "/mnt/restic-backups/terraform-state"
+#     password: "{{ lookup('ansible.builtin.env', 'RESTIC_TERRAFORM_STATE_PASSWORD') }}"
+#     paths:
+#       - /home/admin/homecloud-infra/worlds
+#     excludes:
+#       - "*/.terraform/*"
+#     on_calendar: "daily"
+#     keep_daily: 14
+#     keep_weekly: 8
+#     keep_monthly: 12
+#     keep_yearly: 2
+#   - name: nextcloud
+#     repository: "/mnt/restic-backups/nextcloud"
+#     password: "{{ lookup('ansible.builtin.env', 'RESTIC_NEXTCLOUD_PASSWORD') }}"
+#     paths:
+#       - /opt/nextcloud-aio/backups
+#
+# Empty by default on purpose — never a real default, and the
+# per-item `password` is the one place a lookup('env', ...) belongs in
+# a *value* passed into this role (never inside this role's own
+# tasks/), matching this repo's env-sourcing convention.
+restic_jobs: []

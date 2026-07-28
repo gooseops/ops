@@ -1,0 +1,7 @@
+# Managed by Ansible (incus-host role)
+# Physical uplink NIC — surrenders its IP and joins the bridge.
+[Match]
+Name={{ incus_network_bridge_uplink }}
+
+[Network]
+Bridge={{ incus_network_bridge_name }}

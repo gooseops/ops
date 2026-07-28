@@ -6,5 +6,82 @@ jitsi_key_file: "/etc/letsencrypt/live/{{ jitsi_domain }}/privkey.pem"
 jitsi_keystore_create: false
 jitsi_keystore_dir: "/etc/security"
 jitsi_keystore_path: "{{ jitsi_keystore_dir }}/cacerts"
-jitsi_keystore_pass: "changeme"
+# Empty placeholder on purpose — never a real default, never a
+# lookup('env', ...) in this file. A Java keystore with a guessable
+# password is a real vulnerability, not a cosmetic default value; a
+# task-level assertion fails loud if this is still empty at play time.
+# Source through group_vars/host_vars in your inventory repo.
+jitsi_keystore_pass: ""
 jitsi_ssl_enabled: true
+
+# ----------------------------------------------------------------- #
+# External TURN server. Solves NAT traversal for P2P calls (Jitsi's
+# direct client-to-client mode, used before a call escalates to
+# needing the video bridge) — this is the piece a previous deployment
+# attempt of this role never configured. See the role README before
+# touching this section; it links the mechanism this actually uses and
+# what it deliberately doesn't implement yet.
+#
+# On by default: leaving this off is not a safe default if either
+# calling party is behind CGNAT, which is the common case on most
+# home/mobile networks, not the exception. If you genuinely don't need
+# it (e.g. testing on a single LAN), set jitsi_turn_enabled to false
+# explicitly rather than leaving credentials empty and letting the
+# assertion fail.
+# ----------------------------------------------------------------- #
+jitsi_turn_enabled: true
+jitsi_turn_host: ""
+jitsi_turn_port: 3478
+jitsi_turn_tls_port: 5349
+# Long-term-credential username/password — must match whatever's
+# configured as coturn_static_username/coturn_static_password on
+# whatever host is actually running the TURN server (this role and the
+# ops coturn role don't reference each other directly; the two roles
+# just need matching values from your inventory repo). See the coturn
+# role's README for why config.js needs this simpler credential mode
+# rather than coturn's more modern shared-secret mode.
+jitsi_turn_username: ""
+jitsi_turn_password: ""
+
+# ----------------------------------------------------------------- #
+# JVB-side NAT address mapping. A DIFFERENT problem than the TURN
+# config above: this is for when the Jitsi host itself (running the
+# video bridge) doesn't have a real public IP on its own network
+# interface, so it needs to be told its own public/private address
+# pair to advertise correctly in ICE candidates. Off by default — only
+# needed if this host is itself behind NAT/CGNAT with no direct public
+# reachability for its RTP media port.
+# ----------------------------------------------------------------- #
+jitsi_jvb_nat_harvester_enabled: false
+jitsi_jvb_public_address: ""
+jitsi_jvb_local_address: ""
+
+# ----------------------------------------------------------------- #
+# Secure domain — user authentication for meeting creation. Off by
+# default: with this off (the package's out-of-the-box behavior),
+# ANYONE who can reach this Jitsi instance can create a room, not just
+# join one — an easy gap to leave open by accident. See the role README
+# for the full explanation and exactly what enabling it changes.
+#
+# Turning this on with an empty jitsi_secure_domain_moderators list
+# locks EVERYONE out of creating meetings (existing rooms can still be
+# joined by anonymous guests, but nobody can start a new one) — the
+# assertion requires at least one moderator account if this is true.
+# ----------------------------------------------------------------- #
+jitsi_secure_domain_enabled: false
+
+# Subdomain (prefixed to jitsi_domain) anonymous guests join through
+# without an account — internal to Jitsi/Prosody, needs no DNS record,
+# no TLS cert, no web server config of its own.
+jitsi_secure_domain_guest_subdomain: "guest"
+
+# Accounts allowed to create/moderate meetings, registered via
+# `prosodyctl register` on this host. Empty by default — required
+# (non-empty) if jitsi_secure_domain_enabled is true. Each item needs
+# `username` and `password`; source the passwords through group_vars/
+# host_vars, never hardcode them here.
+#
+# jitsi_secure_domain_moderators:
+#   - username: alice
+#     password: "{{ lookup('ansible.builtin.env', 'JITSI_MODERATOR_ALICE_PASSWORD') }}"
+jitsi_secure_domain_moderators: []

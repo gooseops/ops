@@ -1,0 +1,20 @@
+---
+# Disable e1000e segmentation offload to avoid the "Detected Hardware
+# Unit Hang" bug on some onboard Intel NICs. See defaults/main.yml for
+# the why. Safe no-op on hosts without an e1000e NIC.
+
+- name: Incus | Ensure ethtool is installed (e1000e offload fix)
+  become: true
+  ansible.builtin.apt:
+    name: ethtool
+    state: present
+
+- name: Incus | Drop e1000e offload udev rule
+  become: true
+  ansible.builtin.template:
+    src: e1000e-offload.rules.j2
+    dest: /etc/udev/rules.d/70-e1000e-offload.rules
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload udev rules

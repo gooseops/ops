@@ -1,0 +1,24 @@
+---
+- name: Easy!Appointments
+  hosts: easyappointments
+  roles:
+    - role: docker
+    - role: easyappointments
+    - role: nginx-base
+    - role: nginx-proxy
+
+## Unlike authentik/odoo/synapse/vaultwarden/mattermost, this play does
+## NOT need the postgresql role run first — Easy!Appointments needs
+## MySQL/MariaDB, not Postgres, and this role bundles its own MariaDB
+## container rather than pointing at a shared external DB (no shared
+## MySQL/MariaDB role exists in this repo yet — see the role's own
+## README for why).
+##
+## First login: no bootstrap-admin env var. Visit
+## easyappointments_base_url after this play finishes and complete the
+## in-browser setup wizard to create the admin account.
+##
+## Pairing with Nextcloud Calendar (the maintainer's intended booking
+## flow) is per-provider CalDAV config done in the admin UI after first
+## login, not something this playbook or role configures — see the
+## role's README.

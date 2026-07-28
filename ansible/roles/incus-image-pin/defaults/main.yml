@@ -1,0 +1,11 @@
+---
+# Upstream alias on the Incus public image server. The role copies this
+# image into the local cluster image store.
+incus_image_pin_upstream: "images:debian/13/cloud"
+
+# Local alias claimed by the copy. The Incus Terraform module's `image`
+# variable references this name — no default there on purpose (see
+# terraform/modules/incus/README.md), so this is the value you'd pass in.
+# Neutral default here; override per-consumer to whatever naming
+# convention you actually want (e.g. group_vars in the inventory repo).
+incus_image_pin_alias: "debian-13"

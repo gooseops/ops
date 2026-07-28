@@ -28,7 +28,15 @@ changelog.
 
 **Starting a new session:** when the user says "let's continue" or
 similar, immediately read PLAN.md and the most recent file in
-`explanations/` before responding or taking any action.
+`explanations/` before responding or taking any action. Also read
+`~/github/homecloud-infra/PLAN.md` and its most recent `explanations/`
+entry (absolute path — that repo is a sibling directory, not a
+subdirectory, so it never loads automatically) if the work in this
+session touches Incus/migration roles, inventory groups, or anything
+else this repo's roles/modules feed into — that repo now holds the live
+migration status and homelab-specific decisions, not this one. Skip it
+for work that's obviously self-contained to this repo (e.g. a pure
+tflint/ansible-lint fix).
 
 Two directories here are symlinks into a single separate, non-public
 repo (`homecloud-infra`), kept out of this public repo on purpose:
@@ -46,6 +54,31 @@ directory) and its single Terraform world was renamed from `world-01`
 to `production` in the process. `just link-externals` (re)creates both
 symlinks; the maintainer runs all git commands themselves, so don't run
 git commands in `homecloud-infra` unprompted.
+
+**Repo boundary — this repo is public boilerplate, not a homelab
+operations log.** `ops` exists so a stranger can read a Terraform module
+or an Ansible role and reuse it without knowing anything about the
+maintainer's actual infrastructure. `homecloud-infra` is where the
+maintainer's own homelab — real host names, real IPs, real hardware
+constraints, the actual migration plan for their two physical hosts —
+gets documented; it has its own `PLAN.md`, `docs/decisions/`,
+`docs/network.md`, `docs/runbooks/`, `CLAUDE.md`, and `explanations/`,
+mirroring this repo's structure. Before writing any planning content
+here — a new PLAN.md initiative, a decision record, a runbook — check
+whether it's genuinely about the reusable code (belongs here) or about
+the maintainer's specific homelab (belongs in `homecloud-infra` instead).
+When unsure: would this content reveal something about the maintainer's
+actual home network that a reader of a public GitHub repo shouldn't see?
+If yes, it's `homecloud-infra`'s, not this repo's. This repo's own
+`docs/` (when it exists) is scoped narrowly to genuinely generic,
+homelab-agnostic material — e.g. `docs/testing/` holds a role-validation
+checklist for testing this repo's own roles/playbooks against a scratch
+VM, with placeholder domains and no real infra details. Homelab-specific
+decisions/runbooks/network design still never belong here even after
+`docs/` exists for this narrower purpose. If a role/module needs generic
+design-rationale docs of its own, prefer that role/module's own
+directory (e.g. a README) over `docs/` — `docs/` is for cross-role
+material like the testing checklist, not a catch-all.
 
 ---
 
@@ -80,7 +113,8 @@ the maintainer runs all git commands.
 
 **Entry point:** `nix develop`. The flake at the repo root pins the
 operator-side tools: Terraform, tflint, Ansible + ansible-lint, Doppler,
-just, jq, shellcheck, python3, awscli2, google-cloud-sdk. Anyone with Nix
+just, jq, shellcheck, python3, awscli2, google-cloud-sdk,
+wireguard-tools, plus bash and nixfmt-rfc-style. Anyone with Nix
 installed can run any operator command in the repo without separately
 installing anything.
 
@@ -207,4 +241,5 @@ under `terraform/worlds/<name>`.
 | Kubernetes manifests (client work) | `kubernetes/manifests/` |
 | Helm values/charts (client work) | `helm/` |
 | One-off operator scripts | `scripts/` (personal/media scripts live under `scripts/personal_use/`, unrelated to infra ops — not linted by `just lint`) |
-| Session-by-session changelog | `explanations/` |
+| Session-by-session changelog (about this repo's own roles/modules/tooling) | `explanations/` |
+| Homelab-specific decisions, runbooks, network design, strategy docs | `homecloud-infra` repo (private) — NOT this repo, see the repo-boundary note above |

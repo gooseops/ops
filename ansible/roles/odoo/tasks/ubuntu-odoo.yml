@@ -1,0 +1,176 @@
+---
+# This role assumes a reachable Postgres database/user for Odoo already
+# exists (the shared postgresql role, run separately against your db
+# host — see defaults/main.yml).
+#
+# Order matters, and this order is deliberate: wkhtmltopdf is installed
+# and self-verified BEFORE Odoo itself. Odoo's own .deb only
+# soft-recommends wkhtmltopdf (it does not hard-depend on the patched
+# build — it can't, since that build isn't in any distro's repos), so
+# installing Odoo first and hoping it drags in a working wkhtmltopdf is
+# exactly the failure mode this role exists to avoid.
+
+- name: Odoo | Assert required Postgres vars and admin password are set
+  ansible.builtin.assert:
+    that:
+      - odoo_postgres_host | length > 0
+      - odoo_postgres_database | length > 0
+      - odoo_postgres_user | length > 0
+      - odoo_postgres_password | length > 0
+      - odoo_admin_passwd | length > 0
+    fail_msg: >
+      One or more required Odoo variables are unset
+      (odoo_postgres_host/database/user/password, odoo_admin_passwd).
+      Source these through group_vars/host_vars in your inventory repo
+      before running this role — see defaults/main.yml.
+  tags:
+    - odoo
+
+# --- wkhtmltopdf (patched Qt build) — see defaults/main.yml for the full
+# story on why this is its own careful block. ------------------------------
+
+- name: Odoo wkhtmltopdf | Assert this OS release has a known-working .deb
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_release in odoo_wkhtmltopdf_supported_releases
+    fail_msg: >
+      {{ ansible_distribution_release }} is not in
+      odoo_wkhtmltopdf_supported_releases. Check
+      https://github.com/wkhtmltopdf/packaging/releases for whether a
+      matching .deb now exists for this codename before adding it to
+      the list — do not assume it does. Installing a .deb built for a
+      different codename is exactly the dependency-chain failure this
+      role exists to prevent.
+  tags:
+    - odoo
+
+- name: Odoo wkhtmltopdf | Install runtime library prerequisites
+  become: true
+  ansible.builtin.apt:
+    name: "{{ odoo_wkhtmltopdf_prereq_packages }}"
+    state: present
+    update_cache: true
+  tags:
+    - odoo
+
+- name: Odoo wkhtmltopdf | Remove any distro-shipped unpatched package
+  become: true
+  ansible.builtin.apt:
+    name: wkhtmltopdf
+    state: absent
+  tags:
+    - odoo
+
+- name: Odoo wkhtmltopdf | Compute the codename-matched .deb filename and URL
+  ansible.builtin.set_fact:
+    odoo_wkhtmltopdf_deb_name: >-
+      wkhtmltox_{{ odoo_wkhtmltopdf_version }}.{{ ansible_distribution_release }}_amd64.deb
+    odoo_wkhtmltopdf_deb_release: >-
+      https://github.com/wkhtmltopdf/packaging/releases/download/{{ odoo_wkhtmltopdf_version }}
+  tags:
+    - odoo
+
+- name: Odoo wkhtmltopdf | Download the codename-matched patched build
+  ansible.builtin.get_url:
+    url: "{{ odoo_wkhtmltopdf_deb_release }}/{{ odoo_wkhtmltopdf_deb_name }}"
+    dest: "/tmp/{{ odoo_wkhtmltopdf_deb_name }}"
+    mode: "0644"
+  tags:
+    - odoo
+
+- name: Odoo wkhtmltopdf | Install the downloaded package
+  become: true
+  ansible.builtin.apt:
+    deb: "/tmp/{{ odoo_wkhtmltopdf_deb_name }}"
+  tags:
+    - odoo
+
+# Real correctness check, not just "did apt exit 0" — a wrong-codename
+# install can leave a half-broken binary that apt still considers
+# successfully installed. This can only give a real answer during an
+# actual deploy (no equivalent check exists under --check mode).
+- name: Odoo wkhtmltopdf | Verify the patched binary actually runs
+  ansible.builtin.command:
+    cmd: wkhtmltopdf --version
+  register: odoo_wkhtmltopdf_check
+  changed_when: false
+  when: not ansible_check_mode
+  tags:
+    - odoo
+
+- name: Odoo wkhtmltopdf | Assert the patched build string is present
+  ansible.builtin.assert:
+    that:
+      - "'with patched qt' in odoo_wkhtmltopdf_check.stdout"
+    fail_msg: >
+      wkhtmltopdf --version did not report "with patched qt"
+      (got: {{ odoo_wkhtmltopdf_check.stdout }}). The unpatched distro
+      build may have been reinstalled by a later apt operation, or the
+      downloaded .deb wasn't the patched build — do not proceed to
+      install Odoo until this is resolved, PDF reports will be broken.
+  when: not ansible_check_mode
+  tags:
+    - odoo
+
+# --- Odoo itself -------------------------------------------------------
+
+- name: Odoo | Ensure /usr/share/keyrings exists
+  become: true
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - odoo
+
+- name: Odoo | Download the nightly.odoo.com signing key
+  become: true
+  ansible.builtin.get_url:
+    url: https://nightly.odoo.com/odoo.key
+    dest: /usr/share/keyrings/odoo-archive-keyring.asc
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - odoo
+
+- name: Odoo | Add the nightly.odoo.com apt repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/odoo-archive-keyring.asc] https://nightly.odoo.com/{{ odoo_version }}/nightly/deb/ ./"
+    state: present
+    update_cache: true
+    filename: odoo
+  tags:
+    - odoo
+
+- name: Odoo | Install the Odoo package
+  become: true
+  ansible.builtin.apt:
+    name: odoo
+    state: present
+  tags:
+    - odoo
+
+- name: Odoo | Render /etc/odoo/odoo.conf
+  become: true
+  ansible.builtin.template:
+    src: odoo.conf.j2
+    dest: /etc/odoo/odoo.conf
+    owner: odoo
+    group: odoo
+    mode: "0640" # contains the db password + admin_passwd
+  notify: Restart Odoo
+  tags:
+    - odoo
+
+- name: Odoo | Ensure the Odoo service is enabled and running
+  become: true
+  ansible.builtin.systemd:
+    name: odoo
+    state: started
+    enabled: true
+  tags:
+    - odoo

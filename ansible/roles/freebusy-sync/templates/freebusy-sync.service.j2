@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync Google Calendar free/busy into Nextcloud Calendar
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory={{ freebusy_sync_install_dir }}
+ExecStart={{ freebusy_sync_install_dir }}/.venv/bin/python3 {{ freebusy_sync_install_dir }}/sync_freebusy_to_nextcloud.py

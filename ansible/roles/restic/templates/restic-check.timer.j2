@@ -1,0 +1,11 @@
+# Managed by Ansible (restic role)
+[Unit]
+Description=Timer for restic repository check ({{ job.name }})
+
+[Timer]
+OnCalendar={{ job.check_on_calendar | default('weekly') }}
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

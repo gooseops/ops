@@ -1,0 +1,11 @@
+# Managed by Ansible (restic role)
+[Unit]
+Description=Restic backup ({{ job.name }})
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/restic/{{ job.name }}-backup.sh
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,82 @@
+---
+# DESTRUCTIVE. This task block converts the host's primary NIC into a
+# bridge member and moves the host IP onto the bridge. Misconfiguration
+# disconnects the host from the network — secure console/IPMI access
+# before running this, not after, and verify the uplink interface name
+# live (`ip -br link`) rather than trusting a previous run or another
+# host's value.
+
+- name: Incus | Validate bridge variables are set
+  ansible.builtin.assert:
+    that:
+      - incus_network_bridge_uplink | length > 0
+      - incus_network_bridge_address | length > 0
+      - incus_network_bridge_gateway | length > 0
+    fail_msg: >
+      incus_network_bridge_apply is true but uplink/address/gateway are
+      not all set. Configure these in host_vars before applying.
+
+- name: Incus | Take ownership of /etc/network/interfaces (lo only)
+  become: true
+  ansible.builtin.template:
+    src: network-interfaces.j2
+    dest: /etc/network/interfaces
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  # Idempotent: subsequent runs find the file already matches and do
+  # nothing. The first run on a freshly installed host produces a .bak
+  # of the original ifupdown config.
+
+- name: Incus | Ensure systemd-networkd is enabled
+  become: true
+  ansible.builtin.systemd:
+    name: systemd-networkd
+    enabled: true
+    state: started
+
+- name: Incus | Drop bridge netdev
+  become: true
+  ansible.builtin.template:
+    src: incus-bridge.netdev.j2
+    dest: /etc/systemd/network/20-{{ incus_network_bridge_name }}.netdev
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart systemd-networkd
+
+- name: Incus | Drop uplink network unit (joins bridge)
+  become: true
+  ansible.builtin.template:
+    src: incus-uplink.network.j2
+    dest: /etc/systemd/network/10-{{ incus_network_bridge_uplink }}.network
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart systemd-networkd
+
+- name: Incus | Drop bridge network unit (host IP)
+  become: true
+  ansible.builtin.template:
+    src: incus-bridge.network.j2
+    dest: /etc/systemd/network/20-{{ incus_network_bridge_name }}.network
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart systemd-networkd
+
+# Apply the networkd config (creates the bridge, enrolls the uplink,
+# moves the host IP) before the play exits. Without this, the handler
+# would only run at end-of-play, which is fine in isolation but makes
+# any follow-up tasks brittle.
+- name: Incus | Apply systemd-networkd reload immediately (bridge cutover)
+  ansible.builtin.meta: flush_handlers
+
+# No Incus-side catalog registration. With the bridge under
+# systemd-networkd control, Incus auto-detects it as an external
+# `MANAGED=NO` network device. VMs attach with nictype=bridged
+# parent={{ incus_network_bridge_name }} regardless of managed status —
+# Incus plumbs the VM tap into the bridge. An `incus network create`
+# step is unnecessary (and, on some Incus versions, actively trips on
+# cluster-member-specific config keys) for an externally-managed bridge.

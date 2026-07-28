@@ -1,0 +1,8 @@
+# Managed by Ansible (incus-host role)
+Enabled: yes
+Types: deb
+URIs: https://pkgs.zabbly.com/incus/{{ incus_zabbly_channel }}
+Suites: {{ ansible_distribution_release }}
+Components: main
+Architectures: {{ ansible_facts['architecture'] | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}
+Signed-By: /etc/apt/keyrings/zabbly.asc

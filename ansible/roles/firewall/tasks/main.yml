@@ -1,0 +1,52 @@
+---
+- name: Firewall | Assert CIDR lists are configured
+  ansible.builtin.assert:
+    that:
+      - firewall_management_cidrs | length > 0
+      - firewall_metrics_cidrs | length > 0
+      - firewall_cluster_cidrs | length > 0
+    fail_msg: >
+      One or more firewall CIDR lists are empty. Set
+      firewall_management_cidrs, firewall_metrics_cidrs, and
+      firewall_cluster_cidrs in ansible/inventory/group_vars/all.yml
+      (or a tighter group_vars scope) before running the role. Empty
+      defaults are intentional — they force a deliberate choice.
+  tags:
+    - firewall
+
+- name: Firewall | Install nftables
+  become: true
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+  tags:
+    - firewall
+
+- name: Firewall | Render /etc/nftables.conf (validated)
+  become: true
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/nft -c -f %s
+  notify: Reload nftables
+  tags:
+    - firewall
+
+- name: Firewall | Enable and start nftables
+  become: true
+  ansible.builtin.systemd:
+    name: nftables
+    state: started
+    enabled: true
+  tags:
+    - firewall
+
+# Force the reload mid-play so any failure surfaces while we still have
+# a usable SSH session — same pattern as the base role's sshd reload.
+- name: Firewall | Apply nftables reload immediately
+  ansible.builtin.meta: flush_handlers
+  tags:
+    - firewall

@@ -6,6 +6,7 @@
     - role: nextcloud
     - role: nginx-base
     - role: nginx-proxy
+    - role: freebusy-sync
 
 ## After the ansible playbook runs and some containers have been set, we need these commands for adminstrative purposes.
 ## Might be able to run before initial setup

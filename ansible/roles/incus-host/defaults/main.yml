@@ -1,0 +1,143 @@
+---
+# Incus version channel from Zabbly (https://zabbly.com/incus/). Zabbly
+# pins LTS channels by major version ("lts-6.0", "lts-7.0", ...); "stable"
+# tracks the latest non-LTS release. LTS is the default here: CLI/API
+# stability matters more than bleeding-edge features for a hypervisor,
+# and pinning to a specific LTS major means a deliberate channel switch
+# is required to jump majors, not an apt-update side effect.
+incus_zabbly_channel: lts-6.0
+
+# HTTPS API listen socket. Clustered Incus rejects wildcard addresses for
+# cluster.https_address (derived from core.https_address), so this must
+# resolve to the host's real, reachable IP — `ansible_host` (the
+# inventory `ansible_host:` value) is normally correct once the bridge
+# cutover below has run and that's the host's address.
+incus_listen_address: "{{ ansible_host }}:8443"
+
+# Hardware monitoring packages for hypervisors (lm-sensors, smartmontools;
+# see incus_install_ipmitool below for BMC/IPMI-equipped hardware).
+# node-exporter scraping the textfile_collector for this data is a
+# separate, follow-up concern — not part of this role.
+incus_install_hardware_metrics: true
+
+# Only relevant if incus_install_hardware_metrics is true. Off by default:
+# many small-form-factor / desktop-class hosts common in a homelab have no
+# BMC (dmidecode --type 38 shows nothing, /dev/ipmi0 never appears), and
+# installing ipmitool on such a host pulls in openipmi, whose service then
+# fails on every boot with nothing to query. Flip on per-host (group_vars/
+# host_vars) for hardware that actually has a BMC.
+incus_install_ipmitool: false
+
+# Web UI (incus-ui-canonical). Served by the incus daemon on the same
+# 8443 socket as the API — no new port, no new auth surface (uses the
+# same per-client cert trust). Observability-only: provisioning still
+# goes through Terraform, so the UI is for at-a-glance status, not
+# clicking changes that would drift from declared state.
+incus_install_ui: true
+
+# --- Storage pre-flight (LVM-thin) ---
+# This role assumes an LVM-thin Incus storage backend carved from the
+# free extents an encrypted- or plain-LVM install left in the volume
+# group. The cluster-wide pool is created AFTER clustering, once, by
+# whatever runbook your consuming repo uses (per-member
+# `incus storage create ... --target=`, then one final call without
+# --target to finalize) — not by this role. This role only validates the
+# per-host prerequisite: that a VG with enough free space actually
+# exists, so a mis-sized install is caught here rather than at
+# pool-create time.
+incus_storage_validate: true
+# The LVM volume group the install created. Debian's guided
+# encrypted-LVM installer names it "<hostname>-vg" by default. Override
+# per host if the installer chose a different name; verify with `vgs` if
+# the assertion below fails.
+incus_storage_vg: "{{ ansible_hostname }}-vg"
+# Minimum free space (GiB) the VG must have for the thin pool. Size this
+# to your actual drives — this default is a conservative floor, not a
+# recommendation.
+incus_storage_min_free_gib: 100
+# Cluster-wide Incus storage pool name. Match this to whatever
+# `storage_pool` value you pass into the Incus Terraform instance module
+# — the pool itself is created by your cluster-bootstrap runbook, not
+# here.
+incus_storage_pool_name: local
+
+# --- Network bridge (gated, opt-in) ---
+# This is the destructive operation: it converts the host's primary NIC
+# into a bridge member and moves the host IP onto the bridge so VMs can
+# attach directly to the network. Misconfiguration locks the host off
+# the network — secure console/IPMI access before flipping this on, and
+# double-check the uplink interface name live (`ip -br link`) rather
+# than trusting a value from a previous run or another host; predictable
+# interface names vary by hardware/BIOS even on nominally identical
+# machines.
+incus_network_bridge_apply: false
+incus_network_bridge_name: incusbr0
+incus_network_bridge_uplink: "" # e.g. enp1s0
+incus_network_bridge_address: "" # e.g. 192.168.1.55/24
+incus_network_bridge_gateway: "" # e.g. 192.168.1.1
+incus_network_bridge_dns: [] # e.g. [192.168.1.1] — set per host/group_vars
+
+# --- Intel e1000e NIC offload workaround ---
+# Some onboard Intel I217/I218/I219 NICs hit the long-standing e1000e
+# "Detected Hardware Unit Hang" bug under sustained load — TCP
+# segmentation offload corrupts the TX ring and the adapter wedges (the
+# classic dmesg signature: TX descriptor head/tail, followed by a driver
+# "Reset adapter"). Disabling TX segmentation offload is the standard,
+# durable workaround; on a 1GbE link the cost of segmenting in software
+# is negligible. On (default) is a safe no-op on hardware that doesn't
+# have this NIC — the udev rule only ever matches the e1000e driver.
+#
+# Applied via a driver-matched udev rule (NOT a .link file: a custom
+# .link matching the driver would also own the NIC's naming policy and
+# risk renaming the uplink, breaking the bridge match). The rule fires on
+# device add, so it is correct on every identical host regardless of
+# interface name and survives reboots. To fix an already-running NIC
+# without a reboot, run the equivalent `ethtool -K <iface> ... off` by
+# hand once — see the role README.
+incus_e1000e_offload_fix: true
+# Offload features to disable. The hang is transmit-side, so the TX
+# segmentation offloads tso and gso are the culprits. gro is
+# receive-side and not implicated, so it stays on. Add gro/tx/rx/sg only
+# if hangs persist after disabling these two.
+incus_e1000e_offload_features:
+  - tso
+  - gso
+
+# --- dropbear-initramfs remote LUKS unlock (opt-in) ------------------------
+# Off by default — this role does not assume your hosts use LUKS-
+# encrypted root. If they do, this SSHes into the early-boot initramfs
+# and runs cryptroot-unlock remotely instead of requiring a passphrase
+# typed at the physical console (useful on hardware with no BMC/IPMI).
+# Touches the boot chain if enabled — read and understand every task in
+# tasks/dropbear.yml before the first run on any host, and canary on one
+# host before rolling to the rest.
+incus_dropbear_enable: false
+
+# Public half of a dedicated break-glass keypair for the above — NOT the
+# day-to-day admin key. Empty here on purpose (meaningless placeholder,
+# not a real default); a task-level assertion fails loud if
+# incus_dropbear_enable is true and this is still empty. Source it from
+# your secrets manager the same way other env-sourced values are bound
+# in this repo's roles: the lookup lives in group_vars/host_vars, never
+# in a task.
+incus_dropbear_breakglass_public_key: ""
+
+# Netmask (not prefix length) for the initramfs ip= kernel command line —
+# only used if incus_dropbear_enable is true. Empty placeholder; set per
+# environment (e.g. group_vars for your incus-hosts group).
+incus_cluster_netmask: ""
+
+# Forces every initramfs SSH session to run cryptroot-unlock server-side
+# (-c), regardless of what command the client requests — this overrides
+# any command= restriction set in authorized_keys, so authorized_keys
+# does not need to (and cannot reliably) carry its own command=. -s
+# disables password auth (moot — there is no user database in initramfs —
+# but explicit). -j/-k disable agent and port forwarding at the binary
+# level.
+incus_dropbear_options: "-c cryptroot-unlock -s -j -k"
+
+# Debian's grub2 packaging sources /etc/default/grub.d/*.cfg after
+# /etc/default/grub. Using a dedicated drop-in file (rather than editing
+# /etc/default/grub in place) keeps this role from having to parse/own a
+# file it doesn't otherwise touch.
+incus_grub_dropin_path: /etc/default/grub.d/60-incus-dropbear-ip.cfg

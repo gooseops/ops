@@ -1,0 +1,86 @@
+---
+# Verify the latest stable tag at hub.docker.com/r/alextselegidis/easyappointments/tags
+# (or github.com/alextselegidis/easyappointments/releases) before bumping —
+# the official image only started publishing version tags at 1.5.0; don't
+# float on `latest`, pin like every other app role in this repo.
+easyappointments_version: "1.6.0"
+
+# Host port the reverse proxy (nginx-proxy role) targets. The container
+# only ever serves plain HTTP internally — TLS terminates at nginx, same
+# as every other app in this repo (see authentik/vaultwarden/nextcloud).
+easyappointments_http_port: "8082"
+
+# The public URL end users and provider CalDAV clients will reach this
+# through — must match the nginx-proxy vhost you configure, and must be
+# correct BEFORE first run: Easy!Appointments bakes this into generated
+# links (booking confirmation emails, the customer-facing booking page
+# URL) rather than deriving it from the request at runtime.
+easyappointments_base_url: ""
+
+# Optional. URL to a favicon.ico to fetch and bind-mount over the
+# upstream default (see the README's "Apache config" section for why
+# this can't be an admin-UI setting like company_logo). Empty by
+# default and genuinely optional — deliberately NOT a file committed
+# to this role's own files/: a branded icon is homelab/deployment-
+# specific content, not generic reusable boilerplate, so it's sourced
+# from your inventory repo's group_vars instead, same reasoning as
+# every other value in this repo that identifies a specific deployment
+# rather than describing the role itself.
+easyappointments_favicon_url: ""
+
+easyappointments_language: "english"
+easyappointments_debug_mode: false
+
+# ----------------------------------------------------------------- #
+# Database. Unlike this repo's Postgres-backed app roles (authentik,
+# odoo, synapse, vaultwarden, mattermost), Easy!Appointments needs
+# MySQL/MariaDB, and this repo has no shared MySQL/MariaDB role yet to
+# point it at (the shared-external-DB pattern used elsewhere doesn't
+# have an equivalent here — see the postgresql role for what that
+# pattern looks like once/if a shared MySQL role exists). So this role
+# bundles a MariaDB container in the same compose stack instead —
+# WITH a persistent volume, unlike authentik's bundled Redis: Redis
+# there is pure cache/broker (losing it on restart just logs users out
+# and drops in-flight Celery jobs), but this database holds every
+# appointment, customer, and provider record — the actual application
+# data, not a cache. Revisit if a shared mysql/mariadb role gets added
+# later and multiple roles want to point at it instead of bundling.
+# ----------------------------------------------------------------- #
+easyappointments_mariadb_image: "mariadb:11"
+easyappointments_db_name: "easyappointments"
+easyappointments_db_user: "easyappointments"
+
+# ----------------------------------------------------------------- #
+# Secrets. Empty placeholders on purpose — never a real default and
+# never a lookup('env', ...) in this file. Source real values through
+# group_vars/host_vars in your inventory repo, the same way every
+# other env-sourced value in this repo's roles is bound. A task-level
+# assertion fails loud if any of these are still empty at play time.
+# ----------------------------------------------------------------- #
+easyappointments_db_password: ""
+easyappointments_db_root_password: ""
+
+# ----------------------------------------------------------------- #
+# Outbound mail (SMTP) — required for the actual product to work:
+# booking confirmations, reminders, and provider notifications all go
+# out through this. Not asserted as required (a demo/internal instance
+# can run without it), but functionally the app is broken without a
+# working SMTP config — the README calls this out explicitly. Empty
+# placeholders here, same rule as above.
+# ----------------------------------------------------------------- #
+easyappointments_mail_smtp_host: ""
+easyappointments_mail_smtp_port: 587
+easyappointments_mail_smtp_crypto: "tls"
+easyappointments_mail_smtp_auth: true
+easyappointments_mail_smtp_user: ""
+easyappointments_mail_smtp_pass: ""
+easyappointments_mail_from_address: ""
+easyappointments_mail_from_name: "Easy!Appointments"
+easyappointments_mail_reply_to_address: ""
+
+# ----------------------------------------------------------------- #
+# CalDAV sync (e.g. against Nextcloud Calendar) is a per-provider
+# setting configured in the Easy!Appointments admin UI after first
+# login — there is no environment variable or role-level config for
+# it. See the README for the Nextcloud pairing notes.
+# ----------------------------------------------------------------- #

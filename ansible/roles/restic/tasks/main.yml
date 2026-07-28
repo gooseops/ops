@@ -1,0 +1,6 @@
+---
+- name: Restic Role
+  ansible.builtin.import_tasks: ubuntu-restic.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - restic

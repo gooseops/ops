@@ -1,0 +1,69 @@
+---
+# This role assumes Docker is already installed on the system (the
+# docker role, run first — see authentik.playbook.yml) and that a
+# reachable Postgres database/user for Authentik already exists (the
+# shared postgresql role, run separately against your db host — see
+# defaults/main.yml).
+
+- name: Authentik | Assert required secrets and Postgres host are set
+  ansible.builtin.assert:
+    that:
+      - authentik_postgres_host | length > 0
+      - authentik_postgres_password | length > 0
+      - authentik_secret_key | length > 0
+      - authentik_bootstrap_password | length > 0
+      - authentik_bootstrap_token | length > 0
+    fail_msg: >
+      One or more required Authentik variables are unset
+      (authentik_postgres_host, authentik_postgres_password,
+      authentik_secret_key, authentik_bootstrap_password,
+      authentik_bootstrap_token). Source these through group_vars/
+      host_vars in your inventory repo before running this role —
+      see defaults/main.yml.
+  tags:
+    - authentik
+
+- name: Authentik | Assert S3 vars are set if S3 storage is enabled
+  ansible.builtin.assert:
+    that:
+      - authentik_s3_access_key | length > 0
+      - authentik_s3_secret_key | length > 0
+      - authentik_s3_bucket | length > 0
+      - authentik_s3_endpoint | length > 0
+    fail_msg: >
+      authentik_s3_enabled is true but one or more of
+      authentik_s3_access_key/secret_key/bucket/endpoint is unset.
+  when: authentik_s3_enabled | bool
+  tags:
+    - authentik
+
+- name: Authentik | Create install directory
+  become: true
+  ansible.builtin.file:
+    path: /opt/authentik
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - authentik
+
+- name: Authentik | Install Docker Compose file
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/authentik/docker-compose.yml
+    owner: root
+    group: root
+    mode: "0600" # env block carries secrets in plaintext
+  tags:
+    - authentik
+
+- name: Authentik | Deploy via Docker Compose
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: /opt/authentik
+    state: present
+  register: authentik_compose
+  tags:
+    - authentik

@@ -1,5 +1,41 @@
 ---
-- name: Ubuntu Jitsi | Apt packages
+- name: Jitsi | Assert required secrets are set
+  ansible.builtin.assert:
+    that:
+      - jitsi_keystore_pass | length > 0
+      - not jitsi_turn_enabled or (jitsi_turn_host | length > 0 and jitsi_turn_username | length > 0 and jitsi_turn_password | length > 0)
+      - not jitsi_jvb_nat_harvester_enabled or (jitsi_jvb_public_address | length > 0 and jitsi_jvb_local_address | length > 0)
+      - not jitsi_secure_domain_enabled or jitsi_secure_domain_moderators | length > 0
+    fail_msg: >
+      jitsi_keystore_pass is required. If jitsi_turn_enabled is true
+      (the default), jitsi_turn_host/jitsi_turn_username/
+      jitsi_turn_password are also required — set jitsi_turn_enabled to
+      false explicitly if you really don't want a TURN server, rather
+      than leaving these empty. If jitsi_jvb_nat_harvester_enabled is
+      true, jitsi_jvb_public_address/jitsi_jvb_local_address are
+      required too. If jitsi_secure_domain_enabled is true,
+      jitsi_secure_domain_moderators needs at least one entry — turning
+      secure domain on with zero moderator accounts locks everyone out
+      of creating meetings. Source these through group_vars/host_vars —
+      see defaults/main.yml.
+  tags:
+    - jitsi
+
+- name: Jitsi | Assert each secure-domain moderator has a username and password
+  ansible.builtin.assert:
+    that:
+      - item.username is defined and item.username | length > 0
+      - item.password is defined and item.password | length > 0
+    fail_msg: >
+      Every entry in jitsi_secure_domain_moderators needs a non-empty
+      username and password — got: {{ item }}
+  loop: "{{ jitsi_secure_domain_moderators }}"
+  when: jitsi_secure_domain_enabled
+  no_log: true
+  tags:
+    - jitsi
+
+- name: Jitsi | Apt packages
   become: true
   ansible.builtin.apt:
     name:
@@ -10,16 +46,28 @@
       - openjdk-17-jdk
       - openssl
       - python3-certbot-nginx
+    state: present
+  tags:
+    - jitsi
 
-## TODO: make idempotent
-- name: Ubuntu Jitsi | TLS Certificates with Certbot
+- name: Jitsi | Issue TLS certificate
   become: true
-  ansible.builtin.command: certbot certonly --nginx -d {{ jitsi_domain }} --non-interactive --agree-tos --email {{ jitsi_email }}
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly --nginx -d {{ jitsi_domain }}
+      --non-interactive --agree-tos --email {{ jitsi_email }}
+  args:
+    # certbot certonly's whole job is to produce this file — treating
+    # its existence as the idempotency guard means re-runs skip
+    # instead of re-requesting a cert every play. Renewal is certbot's
+    # own systemd timer's job, not this task's.
+    creates: "{{ jitsi_crt_file }}"
   when: jitsi_ssl_enabled
   notify: Restart Nginx
+  tags:
+    - jitsi
 
-## TODO: make idempotent
-- name: Ubuntu Jitsi | Import TLS Cert into Java Keystore
+- name: Jitsi | Import TLS cert into Java keystore
   become: true
   community.general.java_cert:
     cert_alias: "{{ jitsi_domain }}"
@@ -32,51 +80,57 @@
     - Restart Prosody
     - Restart Jicofo
     - Restart Videobridge
+  tags:
+    - jitsi
 
-- name: Ubuntu Jitsi | Install
+- name: Jitsi | Install
   become: true
   block:
-    - name: Ubuntu Jitsi | Install | Keyrings Directory
+    - name: Jitsi | Install | Keyrings directory
       ansible.builtin.file:
         mode: "0755"
         path: /usr/share/keyrings
         state: "directory"
 
-    - name: Ubuntu Jitsi | Install | Prosidy GPG Key
+    - name: Jitsi | Install | Prosody GPG key
       ansible.builtin.get_url:
         dest: /usr/share/keyrings/prosody-debian-packages.key
         url: https://prosody.im/files/prosody-debian-packages.key
         mode: "0644"
 
-    - name: Ubuntu Jitsi | Install | Prosidy Apt Repository
+    - name: Jitsi | Install | Prosody apt repository
       ansible.builtin.apt_repository:
         repo: "deb [signed-by=/usr/share/keyrings/prosody-debian-packages.key] http://packages.prosody.im/debian {{ ansible_distribution_release }} main"
         state: present
         update_cache: true
         filename: prosody
 
-    - name: Ubuntu Jitsi | Install | Jitsi GPG Key
-      ansible.builtin.shell: |
-        curl -sL https://download.jitsi.org/jitsi-key.gpg.key | sh -c 'gpg --dearmor > /usr/share/keyrings/jitsi-keyring.gpg'
-      args:
+    - name: Jitsi | Install | Jitsi GPG key
+      ansible.builtin.get_url:
+        url: https://download.jitsi.org/jitsi-key.gpg.key
+        dest: /tmp/jitsi-key.gpg.key
+        mode: "0644"
+
+    - name: Jitsi | Install | Dearmor Jitsi GPG key
+      ansible.builtin.command:
+        cmd: gpg --dearmor -o /usr/share/keyrings/jitsi-keyring.gpg /tmp/jitsi-key.gpg.key
         creates: /usr/share/keyrings/jitsi-keyring.gpg
 
-    - name: Ubuntu Jitsi | Install | Jitsi Apt Repository
+    - name: Jitsi | Install | Jitsi apt repository
       ansible.builtin.apt_repository:
         repo: "deb [signed-by=/usr/share/keyrings/jitsi-keyring.gpg] https://download.jitsi.org stable/"
         state: present
         update_cache: true
-        filename: jitsy
+        filename: jitsi
 
-    - name: Ubuntu Jitsi | Install | More Apt packages
-      become: true
+    - name: Jitsi | Install | More apt packages
       ansible.builtin.apt:
         name:
           - lua5.2
         state: present
-        update-cache: true
+        update_cache: true
 
-    - name: Ubuntu Jitsi | Install | Set Domain
+    - name: Jitsi | Install | Set domain
       ansible.builtin.debconf:
         name: jitsi-videobridge
         question: jitsi-videobridge/jvb-hostname
@@ -84,7 +138,7 @@
         vtype: string
       no_log: true
 
-    - name: Ubuntu Jitsi | Install | Set Telephony
+    - name: Jitsi | Install | Disable JaaS (self-hosted, not 8x8 cloud)
       ansible.builtin.debconf:
         name: jitsi-meet-web-config
         question: jitsi-meet/jaas-choice
@@ -92,23 +146,23 @@
         vtype: boolean
       no_log: true
 
-    - name: Ubuntu Jitsi | Install | Set Cert Key Path
+    - name: Jitsi | Install | Set cert key path
       ansible.builtin.debconf:
         name: jitsi-meet-web-config
         question: jitsi-meet/cert-path-key
-        value: /etc/letsencrypt/live/{{ jitsi_domain }}/privkey.pem
+        value: "{{ jitsi_key_file }}"
         vtype: string
       no_log: true
 
-    - name: Ubuntu Jitsi | Install | Set Cert Path
+    - name: Jitsi | Install | Set cert path
       ansible.builtin.debconf:
         name: jitsi-meet-web-config
         question: jitsi-meet/cert-path-crt
-        value: /etc/letsencrypt/live/{{ jitsi_domain }}/fullchain.pem
+        value: "{{ jitsi_crt_file }}"
         vtype: string
       no_log: true
 
-    - name: Ubuntu Jitsi | Install | Set Certificate Type
+    - name: Jitsi | Install | Set certificate type
       ansible.builtin.debconf:
         name: jitsi-meet-web-config
         question: jitsi-meet/cert-choice
@@ -116,13 +170,149 @@
         vtype: select
       no_log: true
 
-    - name: Ubuntu Jitsi | Install | Install | Package
+    - name: Jitsi | Install | Package
       ansible.builtin.apt:
         name:
           - jitsi-meet
         state: present
-        update-cache: true
+        update_cache: true
       notify:
         - Restart Prosody
         - Restart Jicofo
         - Restart Videobridge
+
+# --- TURN server wiring — see defaults/main.yml and the role README. ---
+
+- name: Jitsi TURN | Configure client-side P2P STUN/TURN servers
+  become: true
+  ansible.builtin.blockinfile:
+    path: "/etc/jitsi/meet/{{ jitsi_domain }}-config.js"
+    marker: "// {mark} ANSIBLE MANAGED BLOCK (jitsi role — TURN server)"
+    insertafter: EOF
+    block: "{{ lookup('ansible.builtin.template', 'turn-config-block.js.j2') }}"
+  when: jitsi_turn_enabled
+  notify: Restart Videobridge
+  tags:
+    - jitsi
+
+# --- JVB NAT address mapping — a different problem than the TURN
+# config above, see defaults/main.yml. ------------------------------
+
+- name: Jitsi JVB | Configure NAT static address mapping
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/jitsi/videobridge/jvb.conf
+    marker: "// {mark} ANSIBLE MANAGED BLOCK (jitsi role — JVB NAT harvester)"
+    insertafter: EOF
+    block: "{{ lookup('ansible.builtin.template', 'jvb-nat-harvester-block.conf.j2') }}"
+  when: jitsi_jvb_nat_harvester_enabled
+  notify: Restart Videobridge
+  tags:
+    - jitsi
+
+# --- Secure domain — user auth for meeting creation. See defaults/
+# main.yml and the role README before touching this section. ---------
+
+- name: Jitsi Secure Domain | Require accounts to create meetings
+  become: true
+  ansible.builtin.lineinfile:
+    path: "/etc/prosody/conf.avail/{{ jitsi_domain }}.cfg.lua"
+    regexp: "^(\\s*)authentication\\s*="
+    line: '\1authentication = "internal_hashed"'
+    backrefs: true
+  when: jitsi_secure_domain_enabled
+  notify: Restart Prosody
+  tags:
+    - jitsi
+
+- name: Jitsi Secure Domain | Configure guest (anonymous-join) virtual host
+  become: true
+  ansible.builtin.blockinfile:
+    path: "/etc/prosody/conf.avail/{{ jitsi_domain }}.cfg.lua"
+    marker: "-- {mark} ANSIBLE MANAGED BLOCK (jitsi role — guest domain)"
+    insertafter: EOF
+    block: "{{ lookup('ansible.builtin.template', 'guest-vhost-block.cfg.lua.j2') }}"
+  when: jitsi_secure_domain_enabled
+  notify: Restart Prosody
+  tags:
+    - jitsi
+
+- name: Jitsi Secure Domain | Require Jicofo to authenticate room-creation requests
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/jitsi/jicofo/jicofo.conf
+    marker: "// {mark} ANSIBLE MANAGED BLOCK (jitsi role — secure domain auth)"
+    insertafter: EOF
+    block: "{{ lookup('ansible.builtin.template', 'jicofo-auth-block.conf.j2') }}"
+  when: jitsi_secure_domain_enabled
+  notify: Restart Jicofo
+  tags:
+    - jitsi
+
+- name: Jitsi Secure Domain | Point config.js at the guest domain
+  become: true
+  ansible.builtin.blockinfile:
+    path: "/etc/jitsi/meet/{{ jitsi_domain }}-config.js"
+    marker: "// {mark} ANSIBLE MANAGED BLOCK (jitsi role — anonymous domain)"
+    insertafter: EOF
+    block: "{{ lookup('ansible.builtin.template', 'anonymous-domain-config-block.js.j2') }}"
+  when: jitsi_secure_domain_enabled
+  notify: Restart Videobridge
+  tags:
+    - jitsi
+
+- name: Jitsi Secure Domain | Apply pending Prosody/Jicofo restarts before registering accounts
+  ansible.builtin.meta: flush_handlers
+  tags:
+    - jitsi
+
+# prosodyctl register has no clean "already exists" check exposed as a
+# module or a simple file-existence guard we can rely on across prosody
+# versions, so this always runs and is treated as idempotent-in-effect:
+# re-running resets the account's password to whatever Ansible has,
+# which is the correct behavior for a credential this repo's convention
+# already treats as inventory-managed (see the base role's
+# authorized_key: exclusive: true for the same philosophy applied to
+# SSH keys) — rotate the password in your inventory repo and re-run to
+# rotate it here too.
+- name: Jitsi Secure Domain | Register moderator accounts
+  become: true
+  ansible.builtin.command:
+    cmd: "prosodyctl register {{ item.username }} {{ jitsi_domain }} {{ item.password }}"
+  register: jitsi_moderator_register
+  changed_when: jitsi_moderator_register.rc == 0
+  failed_when: false
+  loop: "{{ jitsi_secure_domain_moderators }}"
+  loop_control:
+    label: "{{ item.username }}"
+  when: jitsi_secure_domain_enabled
+  no_log: true
+  tags:
+    - jitsi
+
+- name: Jitsi | Apply pending restarts immediately
+  ansible.builtin.meta: flush_handlers
+  tags:
+    - jitsi
+
+# Real correctness check, not just "did apt/debconf exit 0" — verifies
+# the three services this role depends on are actually up after every
+# change, not just after a fresh install.
+- name: Jitsi | Gather service facts
+  ansible.builtin.service_facts:
+  tags:
+    - jitsi
+
+- name: Jitsi | Assert core services are active
+  ansible.builtin.assert:
+    that:
+      - "ansible_facts.services[item].state == 'running'"
+    fail_msg: >
+      {{ item }} is not running after deploy — check
+      `journalctl -u {{ item }}` on the host.
+  loop:
+    - prosody.service
+    - jicofo.service
+    - jitsi-videobridge2.service
+  tags:
+    - jitsi

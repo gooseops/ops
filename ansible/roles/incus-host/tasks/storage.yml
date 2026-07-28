@@ -1,0 +1,53 @@
+---
+# Per-host storage pre-flight for an LVM-thin Incus backend. This does
+# NOT create the Incus storage pool — that is a cluster-wide operation
+# done once, post-clustering, by whatever runbook your consuming repo
+# uses. Here we only assert the prerequisite the install is responsible
+# for: the volume group exists and has free extents for the thin pool.
+
+- name: Incus storage | Ensure LVM userspace tools are present
+  become: true
+  ansible.builtin.apt:
+    name: lvm2
+    state: present
+
+- name: Incus storage | Read free space in the install volume group
+  become: true
+  ansible.builtin.command:
+    cmd: vgs --noheadings --nosuffix --units g -o vg_free {{ incus_storage_vg }}
+  register: incus_vg_free
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Incus storage | Check whether the Incus thin pool already exists
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      lvs --noheadings -o lv_name --select "vg_name={{ incus_storage_vg }}
+      && lv_attr=~^t"
+  register: incus_thinpool_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Incus storage | Assert the VG exists with free space (or the thin pool already owns it)
+  ansible.builtin.assert:
+    that:
+      - incus_vg_free.rc == 0
+      - (incus_vg_free.stdout | trim | float) >= incus_storage_min_free_gib or (incus_thinpool_check.stdout | trim | length) > 0
+    fail_msg: >
+      Volume group '{{ incus_storage_vg }}' was not found, has less than
+      {{ incus_storage_min_free_gib }} GiB free, and no thin pool LV was
+      detected in it (vgs rc={{ incus_vg_free.rc }},
+      free='{{ incus_vg_free.stdout | trim }}',
+      thinpool='{{ incus_thinpool_check.stdout | trim }}'). The install
+      must leave free VG extents for the Incus thin pool. If the VG has
+      a different name, set incus_storage_vg in host_vars (verify with
+      `vgs`). If the pool was already created via `incus storage
+      create`, this check should have passed on the thin-pool branch
+      instead — verify with `lvs -o lv_name,lv_attr {{ incus_storage_vg }}`.
+    success_msg: >
+      VG '{{ incus_storage_vg }}' has {{ incus_vg_free.stdout | trim }} GiB
+      free for the Incus thin pool '{{ incus_storage_pool_name }}', or the
+      pool already exists ('{{ incus_thinpool_check.stdout | trim }}').

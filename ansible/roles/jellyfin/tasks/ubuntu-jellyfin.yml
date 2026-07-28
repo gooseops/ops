@@ -19,6 +19,7 @@
 
 - name: Ubuntu Jellyfin | Mount Media NFS Share
   when: jellyfin_nfs_share is defined
+  become: true
   ansible.posix.mount:
     path: "/mnt/nfs/media"
     src: "{{ jellyfin_nfs_share }}"
