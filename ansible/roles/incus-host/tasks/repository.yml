@@ -1,0 +1,36 @@
+---
+- name: Incus | Ensure /etc/apt/keyrings exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Incus | Install Zabbly repository signing key
+  become: true
+  ansible.builtin.get_url:
+    url: https://pkgs.zabbly.com/key.asc
+    dest: /etc/apt/keyrings/zabbly.asc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Incus | Drop Zabbly Incus apt source
+  become: true
+  ansible.builtin.template:
+    src: zabbly-incus.sources.j2
+    dest: /etc/apt/sources.list.d/zabbly-incus-{{ incus_zabbly_channel }}.sources
+    owner: root
+    group: root
+    mode: "0644"
+
+# The "Install Incus" task in main.yml has update_cache: true, so the
+# new Zabbly source is fetched before any apt install happens. No
+# explicit refresh task is needed here.
+#
+# Note: switching incus_zabbly_channel later does not remove the
+# previous channel's .sources file — each channel writes its own file
+# additively. Clean up the old one by hand if you deliberately switch
+# channels.

@@ -1,0 +1,27 @@
+---
+## restic is not a standalone service with its own inventory group —
+## it's a capability you add to whichever HOST already holds the data
+## you want backed up (the nextcloud host, wherever Terraform state
+## lives, etc.). This file is illustrative, not a real target: copy
+## the `restic` role into the relevant host-specific playbook(s)
+## instead of running this one as-is.
+##
+## Example: add restic to the nextcloud host alongside its existing
+## roles —
+##
+##   - name: Nextcloud
+##     hosts: nextcloud
+##     roles:
+##       - role: docker
+##       - role: nextcloud
+##       - role: nginx-base
+##       - role: nginx-proxy
+##       - role: restic
+##
+## with that host's restic_jobs (in your inventory repo's group_vars/
+## host_vars) pointing at wherever Nextcloud's own backup/export lands
+## on disk.
+- name: Restic (illustrative — see the comment above)
+  hosts: restic
+  roles:
+    - role: restic

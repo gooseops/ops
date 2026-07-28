@@ -1,10 +1,19 @@
-
+---
 services:
   coturn:
     image: coturn/coturn:{{ coturn_version }}
     container_name: coturn
+    restart: unless-stopped
+    # Host networking is required, not just convenient: coturn needs
+    # the full min-port..max-port UDP relay range plus 3478/5349
+    # reachable with their real source addresses — Docker's default
+    # bridge networking + per-port publishing doesn't scale to a
+    # ~16k-port range and would also NAT the relay traffic, defeating
+    # the point of the external-ip mapping below.
     network_mode: "host"
     volumes:
-      - ./turnserver.conf:/etc/coturn/turnserver.conf
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - {{ coturn_tls_cert_path }}:/etc/coturn/cert.pem:ro
+      - {{ coturn_tls_key_path }}:/etc/coturn/privkey.pem:ro
     tmpfs:
       - /var/lib/coturn

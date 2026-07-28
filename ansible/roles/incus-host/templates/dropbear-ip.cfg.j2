@@ -1,0 +1,11 @@
+# Managed by Ansible (incus-host role, dropbear.yml) — do not edit by hand.
+#
+# Static early-boot networking so dropbear-initramfs can reach the network
+# before the bridge/systemd-networkd exist. Debian's grub2 packaging sources
+# /etc/default/grub.d/*.cfg after /etc/default/grub, so this appends rather
+# than assigns. The interface name at initramfs stage is expected to match
+# the booted name ({{ incus_network_bridge_uplink }}) because initramfs-tools
+# includes udev, but this is worth re-confirming per host the first time —
+# the dropbear task's self-check fails loudly if the resulting cmdline
+# doesn't land in grub.cfg as expected.
+GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX:-} ip={{ incus_dropbear_client_ip }}::{{ incus_network_bridge_gateway }}:{{ incus_cluster_netmask }}:{{ inventory_hostname_short }}:{{ incus_network_bridge_uplink }}:off"

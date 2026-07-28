@@ -233,7 +233,7 @@ ssh host:
 
 # --- Terraform (per-world) ----------------------------------------------
 
-# Initialize a terraform world. Reads the per-world backend.tfbackend
+# Initialize a terraform world. Reads the per-world config.local.tfbackend
 # file to locate the state file.
 tf-init world=default_world:
     #!/usr/bin/env bash

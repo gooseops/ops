@@ -1,0 +1,10 @@
+---
+# Hardware-monitoring packages for hypervisor hosts. Scrape scripts that
+# dump sensor data into node-exporter's textfile_collector are a
+# separate, follow-up concern — these packages are the prerequisite.
+
+- name: Incus | Install hardware metrics packages
+  become: true
+  ansible.builtin.apt:
+    name: "{{ ['lm-sensors', 'smartmontools'] + (['ipmitool'] if incus_install_ipmitool | bool else []) }}"
+    state: present

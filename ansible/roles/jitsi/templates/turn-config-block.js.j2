@@ -1,0 +1,21 @@
+// Appended as a top-level statement after Jitsi Meet's own
+// var/const config = {...}; declaration — mutating config.p2p here
+// works regardless of whether the base file declared config with var
+// or const (const only prevents reassigning the variable itself, not
+// mutating its properties).
+config.p2p = config.p2p || {};
+config.p2p.enabled = true;
+config.p2p.useStunTurn = true;
+config.p2p.stunServers = [
+    { urls: 'stun:{{ jitsi_turn_host }}:{{ jitsi_turn_port }}' },
+    {
+        urls: 'turn:{{ jitsi_turn_host }}:{{ jitsi_turn_port }}',
+        username: '{{ jitsi_turn_username }}',
+        credential: '{{ jitsi_turn_password }}'
+    },
+    {
+        urls: 'turns:{{ jitsi_turn_host }}:{{ jitsi_turn_tls_port }}?transport=tcp',
+        username: '{{ jitsi_turn_username }}',
+        credential: '{{ jitsi_turn_password }}'
+    }
+];

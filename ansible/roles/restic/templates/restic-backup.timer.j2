@@ -1,0 +1,11 @@
+# Managed by Ansible (restic role)
+[Unit]
+Description=Timer for restic backup ({{ job.name }})
+
+[Timer]
+OnCalendar={{ job.on_calendar | default('daily') }}
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

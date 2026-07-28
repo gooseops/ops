@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Managed by Ansible (restic role) — do not edit by hand.
+set -euo pipefail
+
+export RESTIC_REPOSITORY="{{ job.repository }}"
+export RESTIC_PASSWORD_FILE="/etc/restic/{{ job.name }}.password"
+
+# Built as bash arrays rather than a single multi-line backslash-
+# continued command — a blank line from Jinja's block-tag boundaries
+# breaking a `\` continuation silently splits one command into several
+# broken ones (this bit an earlier version of this template); array
+# elements need no line-continuation at all, so that failure mode
+# doesn't exist here.
+paths=(
+{% for path in job.paths %}
+    "{{ path }}"
+{% endfor %}
+)
+
+exclude_args=()
+{% for exclude in job.excludes | default([]) %}
+exclude_args+=(--exclude "{{ exclude }}")
+{% endfor %}
+
+restic backup "${paths[@]}" "${exclude_args[@]}" --tag ansible-managed
+
+restic forget \
+    --keep-daily "{{ job.keep_daily | default(7) }}" \
+    --keep-weekly "{{ job.keep_weekly | default(4) }}" \
+    --keep-monthly "{{ job.keep_monthly | default(6) }}" \
+    --keep-yearly "{{ job.keep_yearly | default(1) }}" \
+    --prune

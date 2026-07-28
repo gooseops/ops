@@ -1,0 +1,12 @@
+# Managed by Ansible (incus-host role)
+# Bridge holds the host's primary IP. VMs attach as additional members.
+[Match]
+Name={{ incus_network_bridge_name }}
+
+[Network]
+Address={{ incus_network_bridge_address }}
+Gateway={{ incus_network_bridge_gateway }}
+{% for ns in incus_network_bridge_dns %}
+DNS={{ ns }}
+{% endfor %}
+ConfigureWithoutCarrier=yes

@@ -1,0 +1,76 @@
+---
+# Authentik uses calendar versioning (chart/image version == app version).
+# Verify the latest stable at goauthentik.io/docs/releases before bumping —
+# major/year-crossing bumps occasionally need blueprint migrations, read the
+# release notes first.
+authentik_version: "2026.2.3"
+
+# Host ports the reverse proxy (nginx-proxy role) targets. Authentik itself
+# only ever serves plain HTTP inside the container — TLS terminates at
+# nginx, same as every other app in this repo (see vaultwarden/nextcloud).
+authentik_http_port: "9000"
+
+# ----------------------------------------------------------------- #
+# Postgres connection — external, shared host. This repo doesn't run
+# per-app Postgres containers; Authentik follows the same pattern as
+# synapse/vaultwarden/mattermost/odoo: point at the shared postgresql
+# role's host, with the actual db/user/hba entries added to that role's
+# invocation in your inventory repo's group_vars/postgresql.yml (NOT
+# here — see the postgresql role's defaults/main.yml for the
+# db_name/db_user/hba shape those entries need).
+# ----------------------------------------------------------------- #
+authentik_postgres_host: ""
+authentik_postgres_port: 5432
+authentik_postgres_database: "authentik"
+authentik_postgres_user: "authentik"
+
+# ----------------------------------------------------------------- #
+# Redis. Authentik needs Redis for caching and the Celery task broker;
+# this role bundles a small instance in the same compose stack (no
+# separate role) — single instance, no persistence (--save ""
+# --appendonly no). Loss on container restart costs active sessions
+# (users log back in) and in-flight Celery tasks (queued emails,
+# password resets) — an acceptable trade-off for a homelab SSO
+# instance. Revisit (clustered Redis + a volume) if that stops being
+# true for your deployment.
+# ----------------------------------------------------------------- #
+authentik_redis_image: "redis:7-alpine"
+
+# ----------------------------------------------------------------- #
+# Secrets. Empty placeholders on purpose — never a real default and
+# never a lookup('env', ...) in this file. Source real values through
+# group_vars/host_vars in your inventory repo, the same way every other
+# env-sourced value in this repo's roles is bound. A task-level
+# assertion fails loud if any of these are still empty at play time —
+# stricter than this repo's older single-secret roles (vaultwarden's
+# DATABASE_URL, e.g.) on purpose: Authentik has enough required secrets
+# that a silently-empty one is a much harder failure to debug than a
+# loud one.
+# ----------------------------------------------------------------- #
+authentik_secret_key: ""
+authentik_postgres_password: ""
+authentik_bootstrap_password: ""
+authentik_bootstrap_token: ""
+
+# ----------------------------------------------------------------- #
+# S3-compatible object storage for media (branding images, etc.) —
+# optional. Off by default: Authentik's own local-disk volume is a
+# perfectly good default for a homelab-scale SSO instance, and this
+# role shouldn't assume you have an S3-compatible bucket at all. Works
+# with any S3-compatible endpoint (not tied to a specific provider).
+# ----------------------------------------------------------------- #
+authentik_s3_enabled: false
+authentik_s3_access_key: ""
+authentik_s3_secret_key: ""
+authentik_s3_bucket: ""
+authentik_s3_endpoint: ""
+authentik_s3_region: "auto"
+
+# ----------------------------------------------------------------- #
+# Authentik objects (OAuth2/OIDC providers, applications, flows) are
+# NOT managed by this role. This role stands up the Authentik service
+# only, with the default seeded flows/admin account. Per-application
+# SSO client config is a separate, app-specific concern — wire it up
+# through Authentik's own admin UI, its API, or (for IaC-driven object
+# config) the Terraform Authentik provider, outside this role.
+# ----------------------------------------------------------------- #

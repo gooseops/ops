@@ -1,14 +1,141 @@
 ---
-- name: Ensure Coturn Directory Exists
+# This role assumes Docker is already installed (the docker role, run
+# first — see coturn.playbook.yml).
+
+- name: Coturn | Assert domain, email, and matching auth-mode secrets are set
+  ansible.builtin.assert:
+    that:
+      - coturn_domain | length > 0
+      - coturn_email | length > 0
+      - coturn_auth_mode in ["static_user", "secret"]
+      - coturn_auth_mode != "static_user" or (coturn_static_username | length > 0 and coturn_static_password | length > 0)
+      - coturn_auth_mode != "secret" or coturn_static_auth_secret | length > 0
+    fail_msg: >
+      coturn_domain/coturn_email must be set, coturn_auth_mode must be
+      "static_user" or "secret", and the credentials matching whichever
+      mode is selected (coturn_static_username/coturn_static_password
+      for static_user, coturn_static_auth_secret for secret) must be
+      non-empty. Source these through group_vars/host_vars in your
+      inventory repo — see defaults/main.yml.
+  tags:
+    - coturn
+
+- name: Coturn | Assert the NAT address mapping is set on both sides or neither
+  ansible.builtin.assert:
+    that:
+      - (coturn_external_public_ip | length > 0) == (coturn_external_private_ip | length > 0)
+    fail_msg: >
+      coturn_external_public_ip and coturn_external_private_ip must
+      either both be set or both be empty — setting only one half
+      produces an invalid external-ip mapping. If this host is behind
+      CGNAT or any other NAT, both need real values; see the role
+      README for why this matters.
+  tags:
+    - coturn
+
+- name: Coturn | Install certbot
+  become: true
+  ansible.builtin.apt:
+    name: certbot
+    state: present
+    update_cache: true
+  tags:
+    - coturn
+
+- name: Coturn | Issue TLS certificate (standalone — no HTTP vhost on this host)
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly --standalone -d {{ coturn_domain }}
+      --non-interactive --agree-tos --email {{ coturn_email }}
+  args:
+    creates: "{{ coturn_tls_cert_path }}"
+  tags:
+    - coturn
+
+- name: Coturn | Ensure coturn directory exists
   ansible.builtin.file:
     path: "{{ coturn_dir }}"
     state: "directory"
     mode: "0755"
+  tags:
+    - coturn
 
-- name: Install Docker Compose File
+- name: Coturn | Install Docker Compose file
   ansible.builtin.template:
     src: docker-compose.yml.j2
     dest: "{{ coturn_dir }}/docker-compose.yml"
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: "0644"
+  notify: Restart Coturn
+  tags:
+    - coturn
+
+- name: Coturn | Install turnserver.conf
+  ansible.builtin.template:
+    src: turnserver.conf.j2
+    dest: "{{ coturn_dir }}/turnserver.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0640" # contains the static password or shared secret
+  notify: Restart Coturn
+  tags:
+    - coturn
+
+- name: Coturn | Install systemd unit
+  become: true
+  ansible.builtin.template:
+    src: coturn-docker.service.j2
+    dest: /etc/systemd/system/coturn-docker.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Coturn
+  tags:
+    - coturn
+
+- name: Coturn | Enable and start the service
+  become: true
+  ansible.builtin.systemd:
+    name: coturn-docker
+    daemon_reload: true
+    enabled: true
+    state: started
+  tags:
+    - coturn
+
+# Force the restart mid-play so config/compose changes actually apply
+# now, not on some later trigger — same pattern used elsewhere in this
+# repo for risky reloads (see the base/incus-host roles).
+- name: Coturn | Apply pending restart immediately
+  ansible.builtin.meta: flush_handlers
+  tags:
+    - coturn
+
+# Real correctness check, not just "did systemd report active" — a
+# crash-looping container can still leave the unit "active" between
+# restart attempts. Requires the docker CLI (already present via the
+# docker role) on the control connection's target host.
+- name: Coturn | Verify the container is actually running
+  become: true
+  community.docker.docker_container_info:
+    name: coturn
+  register: coturn_container
+  tags:
+    - coturn
+
+- name: Coturn | Assert the container is running
+  ansible.builtin.assert:
+    that:
+      - coturn_container.exists
+      - coturn_container.container.State.Running
+    fail_msg: >
+      The coturn container is not running after deploy. Check
+      `docker logs coturn` on the host — a common cause is the TLS
+      cert/key paths (coturn_tls_cert_path/coturn_tls_key_path) not
+      resolving, since docker-compose.yml.j2 bind-mounts them directly
+      and Docker fails the mount (not the coturn process) if either
+      path doesn't exist yet.
+  tags:
+    - coturn

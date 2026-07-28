@@ -26,6 +26,7 @@ outputs = { self, nixpkgs, nixpkgs-unst, flake-utils }:
         shellcheck
         terraform
         tflint
+        wireguard-tools
       ];
       pkgs-unst = import nixpkgs-unst {
         inherit system;

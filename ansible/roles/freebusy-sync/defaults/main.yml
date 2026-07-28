@@ -1,0 +1,69 @@
+---
+# Deploys sync_freebusy_to_nextcloud.py (this role's own files/, not a
+# third-party tool) as a systemd service+timer pair. See that script's
+# own docstring/this role's README for what it does; this role covers
+# scheduling it and wiring its config.
+
+freebusy_sync_install_dir: "/opt/freebusy-sync"
+
+# How often to run. Feeds a live booking system's availability data --
+# tight enough to meaningfully shrink the window where an external
+# Google Calendar event (e.g. a client call added directly) hasn't
+# propagated to Nextcloud yet and a customer could book the same slot
+# through Easy!Appointments. A poll-based sync can't close that window
+# to zero (only a push/webhook-based sync could) -- 1 minute was judged
+# a reasonable tradeoff between that residual risk and not hammering
+# Google's freebusy API or Nextcloud's CalDAV endpoint for no reason.
+# See homecloud-infra's freebusy-sync-google-setup.md if the webhook
+# approach ever becomes worth building instead.
+freebusy_sync_on_calendar: "minutely"
+# Must stay well under the interval above -- RandomizedDelaySec >= the
+# OnCalendar period (as this was briefly set to, at 60s against a
+# 15-minute period, before being tightened) makes the timer's actual
+# firing pattern unpredictable instead of just jittered.
+freebusy_sync_randomized_delay_sec: "5"
+
+# ----------------------------------------------------------------- #
+# Matches the script's own SYNC_LOOKAHEAD_DAYS/SYNC_UID_PREFIX/LOG_LEVEL
+# defaults (see .env.example) — generic, cluster-agnostic, fine to keep
+# here rather than pushing to group_vars.
+# ----------------------------------------------------------------- #
+freebusy_sync_lookahead_days: 90
+freebusy_sync_uid_prefix: "freebusy-sync-"
+freebusy_sync_log_level: "INFO"
+
+# State file the script uses to avoid recreating/orphaning CalDAV UIDs
+# across runs — see the script's own module-level comment on why this
+# matters. Kept under the install dir rather than the default
+# ~/.config path so it's colocated with everything else this role
+# deploys.
+freebusy_sync_state_path: "{{ freebusy_sync_install_dir }}/state/sync_state.json"
+
+# ----------------------------------------------------------------- #
+# Secrets / personal identifiers. Empty placeholders on purpose — never
+# a real default and never a lookup('env', ...) in this file. All of
+# these either grant access to a real account or identify one, so all
+# of them (not just the ones that are technically "secret") are sourced
+# through group_vars/host_vars in your inventory repo, never hardcoded
+# — see the role README and CLAUDE.md's Doppler/env-lookup convention.
+# ----------------------------------------------------------------- #
+
+# Full contents of the Google service account's downloaded JSON key —
+# not a path, the actual JSON text. Written to a file on the host by
+# this role; the file path (not the content) is what the script itself
+# reads via GOOGLE_SERVICE_ACCOUNT_KEY_PATH.
+freebusy_sync_google_service_account_key_json: ""
+
+# The Workspace mailbox this service account impersonates via
+# domain-wide delegation.
+freebusy_sync_google_impersonate_subject: ""
+
+# List of Google Calendar IDs to pull free/busy from (usually email
+# addresses — the impersonated user's own calendar, plus any shared
+# into it). Joined into the script's comma-separated GOOGLE_CALENDAR_IDS
+# format by this role's template.
+freebusy_sync_google_calendar_ids: []
+freebusy_sync_nextcloud_base_url: ""
+freebusy_sync_nextcloud_calendar_url: ""
+freebusy_sync_nextcloud_username: ""
+freebusy_sync_nextcloud_app_password: ""

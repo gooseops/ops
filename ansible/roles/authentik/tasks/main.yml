@@ -1,0 +1,6 @@
+---
+- name: Authentik Role
+  ansible.builtin.import_tasks: ubuntu-authentik.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - authentik

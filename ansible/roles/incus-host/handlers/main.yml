@@ -1,0 +1,26 @@
+---
+- name: Restart systemd-networkd
+  become: true
+  ansible.builtin.systemd:
+    name: systemd-networkd
+    state: restarted
+
+# Reload udev so the new rule is parsed. We deliberately do NOT `udevadm
+# trigger` the live NIC: re-running net rules on a bridged primary uplink
+# mid-play is needless risk. The rule takes effect on the next device add
+# (boot); apply it to a running NIC once by hand (see README).
+- name: Reload udev rules
+  become: true
+  ansible.builtin.command:
+    cmd: udevadm control --reload
+  changed_when: true
+
+- name: Regenerate GRUB config
+  become: true
+  ansible.builtin.command: update-grub
+  changed_when: true
+
+- name: Regenerate initramfs
+  become: true
+  ansible.builtin.command: update-initramfs -u -k all
+  changed_when: true

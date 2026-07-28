@@ -10,11 +10,13 @@
   ansible.builtin.service:
     name: prosody
     state: restarted
+
 - name: Restart Jicofo
   become: true
   ansible.builtin.service:
     name: jicofo
     state: restarted
+
 - name: Restart Videobridge
   become: true
   ansible.builtin.service:

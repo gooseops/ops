@@ -2,10 +2,18 @@
 - name: Coturn
   hosts: coturn
   roles:
-    - role: coturn
     - role: docker
-    - role: nginx-base
-    # - role: nginx-proxy
+    - role: coturn
+    # nginx-base/nginx-proxy deliberately NOT included — coturn's own
+    # protocol isn't HTTP, there's no site for a reverse proxy to
+    # front, and the coturn role issues its own TLS cert via
+    # `certbot --standalone` (needs port 80 free, not nginx running).
     # - role: swap
     #   vars:
     #     swapfile_size: 2G
+
+## This host needs a real public IP (or coturn_external_public_ip/
+## coturn_external_private_ip set correctly) for TURN relaying to work
+## for clients outside its own network — see the coturn role's README,
+## "Solving TURN behind CGNAT" section, before deploying this against a
+## CGNAT'd home network host.

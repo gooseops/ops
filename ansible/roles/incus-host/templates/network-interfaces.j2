@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+# /etc/network/interfaces — fully managed by the incus-host role's
+# bridge cutover. All physical interfaces and bridges live in
+# systemd-networkd under /etc/systemd/network/. Only loopback remains
+# under ifupdown because networkd handles `lo` implicitly anyway, but
+# keeping the stanza here lets the `networking` service stay enabled
+# without surprises.
+
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet loopback

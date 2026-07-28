@@ -1,0 +1,13 @@
+// Appended as a second top-level `jicofo { ... }` block. HOCON deep-
+// merges multiple definitions of the same top-level path across a
+// file, so this merges into whatever the package-managed base
+// jicofo.conf already defines under `jicofo { ... }` without needing
+// to parse/edit that block in place — same mechanism already used for
+// jvb.conf's NAT harvester block, see jvb-nat-harvester-block.conf.j2.
+jicofo {
+  authentication {
+    enabled: true
+    type: XMPP
+    login-url: "{{ jitsi_domain }}"
+  }
+}

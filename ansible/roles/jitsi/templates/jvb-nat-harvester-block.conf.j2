@@ -1,0 +1,20 @@
+// Appended as a second top-level `videobridge { ... }` block in
+// jvb.conf. HOCON (the format jvb.conf uses) deep-merges multiple
+// definitions of the same path across a file rather than treating a
+// second top-level key as a conflict, so this merges into whatever the
+// package-managed base config already defines without needing to
+// parse/understand the rest of that file.
+videobridge {
+  ice4j {
+    harvest {
+      mapping {
+        static-mappings = [
+          {
+            local-address = "{{ jitsi_jvb_local_address }}"
+            public-address = "{{ jitsi_jvb_public_address }}"
+          }
+        ]
+      }
+    }
+  }
+}

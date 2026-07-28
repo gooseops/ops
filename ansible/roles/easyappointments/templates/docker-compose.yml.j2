@@ -1,0 +1,64 @@
+---
+services:
+  mariadb:
+    image: "{{ easyappointments_mariadb_image }}"
+    container_name: easyappointments-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: "{{ easyappointments_db_root_password }}"
+      MARIADB_DATABASE: "{{ easyappointments_db_name }}"
+      MARIADB_USER: "{{ easyappointments_db_user }}"
+      MARIADB_PASSWORD: "{{ easyappointments_db_password }}"
+    volumes:
+      - easyappointments-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    image: "alextselegidis/easyappointments:{{ easyappointments_version }}"
+    container_name: easyappointments-app
+    restart: unless-stopped
+    # The upstream image doesn't enable mod_rewrite by default and its
+    # own docker-entrypoint.sh takes no arguments/env var to do so (checked
+    # the image's entrypoint script before adding this — there's no
+    # cleaner built-in hook). Runs on every container start; a2enmod is
+    # itself idempotent (a no-op if already enabled), so this is safe to
+    # re-run on every Ansible apply/recreate, not just the first one.
+    entrypoint: ["/bin/bash", "-c", "a2enmod rewrite && exec docker-entrypoint.sh"]
+    environment:
+      BASE_URL: "{{ easyappointments_base_url }}"
+      LANGUAGE: "{{ easyappointments_language }}"
+      DEBUG_MODE: "{{ easyappointments_debug_mode | string | upper }}"
+      DB_HOST: mariadb
+      DB_NAME: "{{ easyappointments_db_name }}"
+      DB_USERNAME: "{{ easyappointments_db_user }}"
+      DB_PASSWORD: "{{ easyappointments_db_password }}"
+      MAIL_PROTOCOL: "{{ 'smtp' if easyappointments_mail_smtp_host | length > 0 else 'mail' }}"
+      MAIL_SMTP_HOST: "{{ easyappointments_mail_smtp_host }}"
+      MAIL_SMTP_PORT: "{{ easyappointments_mail_smtp_port }}"
+      MAIL_SMTP_CRYPTO: "{{ easyappointments_mail_smtp_crypto }}"
+      MAIL_SMTP_AUTH: "{{ easyappointments_mail_smtp_auth | string | upper }}"
+      MAIL_SMTP_USER: "{{ easyappointments_mail_smtp_user }}"
+      MAIL_SMTP_PASS: "{{ easyappointments_mail_smtp_pass }}"
+      MAIL_FROM_ADDRESS: "{{ easyappointments_mail_from_address }}"
+      MAIL_FROM_NAME: "{{ easyappointments_mail_from_name }}"
+      MAIL_REPLY_TO_ADDRESS: "{{ easyappointments_mail_reply_to_address }}"
+    volumes:
+      - /opt/easyappointments/config/.htaccess:/var/www/html/.htaccess:ro
+      - /opt/easyappointments/config/apache-hardening.conf:/etc/apache2/conf-enabled/zz-hardening.conf:ro
+{% if easyappointments_favicon_url | length > 0 %}
+      - /opt/easyappointments/config/favicon.ico:/var/www/html/assets/img/favicon.ico:ro
+{% endif %}
+    ports:
+      - "{{ easyappointments_http_port }}:80"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+volumes:
+  easyappointments-db:
+    name: easyappointments-db

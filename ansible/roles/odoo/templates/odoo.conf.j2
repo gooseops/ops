@@ -1,0 +1,16 @@
+; Managed by Ansible (odoo role) — do not edit by hand.
+[options]
+admin_passwd = {{ odoo_admin_passwd }}
+db_host = {{ odoo_postgres_host }}
+db_port = {{ odoo_postgres_port }}
+db_user = {{ odoo_postgres_user }}
+db_password = {{ odoo_postgres_password }}
+db_name = {{ odoo_postgres_database }}
+addons_path = {{ odoo_addons_path }}
+http_port = {{ odoo_http_port }}
+workers = {{ odoo_workers }}
+{% if odoo_workers | int > 0 %}
+; proxy_mode expects a reverse proxy in front (nginx-proxy role) setting
+; X-Forwarded-* headers — only meaningful in multi-worker mode.
+proxy_mode = True
+{% endif %}

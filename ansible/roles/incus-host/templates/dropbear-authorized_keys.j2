@@ -1,0 +1,10 @@
+# Managed by Ansible (incus-host role, dropbear.yml) — do not edit by hand.
+#
+# The break-glass key for remote LUKS unlock — deliberately NOT the
+# day-to-day admin key. DROPBEAR_OPTIONS' "-c cryptroot-unlock" (see
+# dropbear.conf) forces every session to run cryptroot-unlock server-side
+# regardless of what the client requests, which overrides any command=
+# restriction set here — so this line doesn't need (and can't reliably use)
+# its own command=. The no-*-forwarding flags are harmless defense-in-depth
+# on top of dropbear's own -j/-k.
+no-port-forwarding,no-agent-forwarding,no-X11-forwarding {{ incus_dropbear_breakglass_public_key }}

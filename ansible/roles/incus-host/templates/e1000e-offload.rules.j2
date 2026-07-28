@@ -1,0 +1,10 @@
+# Managed by Ansible (incus-host role) — do not edit.
+#
+# Workaround for the Intel e1000e "Detected Hardware Unit Hang" bug on
+# some onboard I217/I218/I219 controllers. Disabling TX segmentation
+# offload stops the TX-ring corruption that wedges the adapter. Matched
+# by driver so it targets the physical NIC on every identical host
+# regardless of interface name, and never touches naming policy (unlike
+# a .link file). Fires at device add (boot); for a NIC that is already
+# up, apply the same ethtool command once by hand — see the role README.
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="e1000e", RUN+="/usr/sbin/ethtool -K $name {{ incus_e1000e_offload_features | join(' off ') }} off"

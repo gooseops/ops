@@ -1,0 +1,96 @@
+---
+# This role assumes Docker is already installed on the system (the
+# docker role, run first — see easyappointments.playbook.yml). Unlike
+# this repo's Postgres-backed app roles, there's no separate shared-DB
+# role to run beforehand — the database is bundled in this role's own
+# compose stack (see defaults/main.yml for why).
+
+- name: Easy!Appointments | Assert required secrets and base URL are set
+  ansible.builtin.assert:
+    that:
+      - easyappointments_base_url | length > 0
+      - easyappointments_db_password | length > 0
+      - easyappointments_db_root_password | length > 0
+    fail_msg: >
+      One or more required Easy!Appointments variables are unset
+      (easyappointments_base_url, easyappointments_db_password,
+      easyappointments_db_root_password). Source the secrets through
+      group_vars/host_vars in your inventory repo before running this
+      role — see defaults/main.yml.
+  tags:
+    - easyappointments
+
+- name: Easy!Appointments | Create install directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /opt/easyappointments
+    - /opt/easyappointments/config
+  tags:
+    - easyappointments
+
+# Bind-mounted read-only into the container (see docker-compose.yml.j2) to
+# fix CodeIgniter's default ugly URLs (/index.php/login) and stop leaking
+# the Apache version in error pages/the Server header — the upstream image
+# ships neither an .htaccess nor mod_rewrite enabled by default. Deployed
+# as plain files rather than baked into a custom image so this stays on
+# the pinned upstream alextselegidis/easyappointments image.
+- name: Easy!Appointments | Deploy Apache config (URL rewriting, hardening)
+  become: true
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/opt/easyappointments/config/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - .htaccess
+    - apache-hardening.conf
+  tags:
+    - easyappointments
+
+# Same bind-mount mechanism as the Apache config above, but fetched
+# from easyappointments_favicon_url rather than committed to this
+# role's own files/ — a branded icon is deployment-specific content,
+# not generic reusable boilerplate (see defaults/main.yml). Optional:
+# skipped entirely if unset, in which case the compose template also
+# skips the bind mount and the upstream default favicon is used.
+# force: false (the module default) means this only downloads once,
+# not on every run — re-fetching a static brand asset every apply
+# isn't needed and would make this task always report changed.
+- name: Easy!Appointments | Fetch custom favicon
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ easyappointments_favicon_url }}"
+    dest: /opt/easyappointments/config/favicon.ico
+    owner: root
+    group: root
+    mode: "0644"
+  when: easyappointments_favicon_url | length > 0
+  tags:
+    - easyappointments
+
+- name: Easy!Appointments | Install Docker Compose file
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/easyappointments/docker-compose.yml
+    owner: root
+    group: root
+    mode: "0600" # env block carries secrets in plaintext
+  tags:
+    - easyappointments
+
+- name: Easy!Appointments | Deploy via Docker Compose
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: /opt/easyappointments
+    state: present
+  register: easyappointments_compose
+  tags:
+    - easyappointments

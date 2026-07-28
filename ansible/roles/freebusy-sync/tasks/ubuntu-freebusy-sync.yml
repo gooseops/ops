@@ -1,0 +1,163 @@
+---
+- name: Freebusy Sync | Assert required secrets/identifiers are set
+  ansible.builtin.assert:
+    that:
+      - freebusy_sync_google_service_account_key_json | length > 0
+      - freebusy_sync_google_impersonate_subject | length > 0
+      - freebusy_sync_google_calendar_ids | length > 0
+      - freebusy_sync_nextcloud_base_url | length > 0
+      - freebusy_sync_nextcloud_calendar_url | length > 0
+      - freebusy_sync_nextcloud_username | length > 0
+      - freebusy_sync_nextcloud_app_password | length > 0
+    fail_msg: >
+      One or more required freebusy-sync variables are unset. Source
+      these through group_vars/host_vars in your inventory repo before
+      running this role — see defaults/main.yml.
+  no_log: true
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Install Python + venv support
+  become: true
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-venv
+      - python3-pip
+    state: present
+    update_cache: true
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Create install directory and state subdirectory
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ freebusy_sync_install_dir }}"
+    - "{{ freebusy_sync_state_path | dirname }}"
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Deploy the script and its requirements file
+  become: true
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ freebusy_sync_install_dir }}/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - sync_freebusy_to_nextcloud.py
+    - requirements.txt
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Write the Google service account key
+  become: true
+  ansible.builtin.copy:
+    content: "{{ freebusy_sync_google_service_account_key_json }}"
+    dest: "{{ freebusy_sync_install_dir }}/service-account.json"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Write the environment file
+  become: true
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ freebusy_sync_install_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Install dependencies into a venv
+  become: true
+  ansible.builtin.pip:
+    requirements: "{{ freebusy_sync_install_dir }}/requirements.txt"
+    virtualenv: "{{ freebusy_sync_install_dir }}/.venv"
+    virtualenv_command: "python3 -m venv"
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Template the systemd service
+  become: true
+  ansible.builtin.template:
+    src: freebusy-sync.service.j2
+    dest: /etc/systemd/system/freebusy-sync.service
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Template the systemd timer
+  become: true
+  ansible.builtin.template:
+    src: freebusy-sync.timer.j2
+    dest: /etc/systemd/system/freebusy-sync.timer
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Reload systemd
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Enable and start the timer
+  become: true
+  ansible.builtin.systemd:
+    name: freebusy-sync.timer
+    enabled: true
+    state: started
+  tags:
+    - freebusy-sync
+
+# Real correctness check, not just "did apt/pip/systemd exit 0" — run
+# the sync right now instead of waiting for the timer. A oneshot
+# service that fails ends in ActiveState=failed, which state: started
+# does not consider satisfied, so a script error (bad credentials,
+# unreachable CalDAV target, etc.) fails this task loudly rather than
+# silently waiting for the next scheduled run to maybe fail the same
+# way with nobody watching.
+- name: Freebusy Sync | Run the sync now
+  become: true
+  ansible.builtin.systemd:
+    name: freebusy-sync.service
+    state: started
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Verify the sync actually reached the state-save step
+  become: true
+  ansible.builtin.stat:
+    path: "{{ freebusy_sync_state_path }}"
+  register: freebusy_sync_state_file
+  tags:
+    - freebusy-sync
+
+- name: Freebusy Sync | Assert the state file was written
+  ansible.builtin.assert:
+    that:
+      - freebusy_sync_state_file.stat.exists
+    fail_msg: >
+      freebusy-sync.service ran without producing a state file at
+      {{ freebusy_sync_state_path }} — check `journalctl -u
+      freebusy-sync.service` on the host.
+  tags:
+    - freebusy-sync

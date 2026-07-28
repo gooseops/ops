@@ -1,0 +1,178 @@
+---
+# Remote unlock for a LUKS-encrypted root via dropbear-initramfs: SSH
+# into the early-boot initramfs environment and run cryptroot-unlock
+# remotely instead of typing the passphrase at the physical console —
+# useful on hardware with no BMC/IPMI. Opt-in (incus_dropbear_enable,
+# default false in defaults/main.yml) — this role does not assume your
+# hosts use LUKS. If you enable it: this touches the boot chain, read
+# every task below before the first run on any host, and canary on one
+# host before rolling to the rest. A misconfiguration here degrades
+# safely to the existing console passphrase prompt rather than locking a
+# host out, but recovering from a mistake still means a physical trip.
+
+- name: Incus dropbear | Assert required break-glass key is set
+  ansible.builtin.assert:
+    that:
+      - incus_dropbear_breakglass_public_key | length > 0
+    fail_msg: >
+      incus_dropbear_enable is true but incus_dropbear_breakglass_public_key
+      is unset. Generate a dedicated break-glass keypair (not your
+      day-to-day admin key) and source the public half through
+      group_vars/host_vars the same way other env-sourced values are
+      bound in this repo's roles — never hardcode it here. The matching
+      private key should never enter this repo or your secrets manager's
+      general-purpose namespace; keep it on the operator's own devbox.
+
+# --- Static early-boot networking ------------------------------------------
+# dropbear needs the initramfs network stack up before the bridge and
+# systemd-networkd exist, which requires a static ip= kernel command-line
+# parameter. Reuses the existing incus_network_bridge_* vars rather than
+# introducing parallel per-host IP vars.
+
+- name: Incus dropbear | Assert bridge vars are set (reused for ip=)
+  ansible.builtin.assert:
+    that:
+      - incus_network_bridge_uplink | length > 0
+      - incus_network_bridge_address | length > 0
+      - incus_network_bridge_gateway | length > 0
+      - incus_cluster_netmask | length > 0
+    fail_msg: >
+      incus_network_bridge_uplink/address/gateway (host_vars) and
+      incus_cluster_netmask (e.g. group_vars for your incus-hosts group)
+      must all be set — this role computes the initramfs ip= line from
+      them.
+
+- name: Incus dropbear | Compute the client IP (strip CIDR suffix)
+  ansible.builtin.set_fact:
+    incus_dropbear_client_ip: "{{ incus_network_bridge_address.split('/')[0] }}"
+
+- name: Incus dropbear | Ensure /etc/default/grub.d exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/default/grub.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Incus dropbear | Drop the initramfs ip= GRUB config
+  become: true
+  ansible.builtin.template:
+    src: dropbear-ip.cfg.j2
+    dest: "{{ incus_grub_dropin_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Regenerate GRUB config
+
+# Regenerate now rather than waiting for end-of-play, so the self-check
+# below runs against the config this play actually produced.
+- name: Incus dropbear | Apply GRUB regeneration immediately
+  ansible.builtin.meta: flush_handlers
+
+# Debian's grub.d/*.cfg sourcing order is a packaging detail this role
+# doesn't want to trust blindly — assert the computed ip= string actually
+# landed in the generated config instead of assuming the append worked. A
+# miss here means initramfs networking silently falls back to the
+# existing console passphrase prompt — not a lockout, but worth failing
+# the play loudly over rather than discovering it at the next reboot.
+#
+# Skipped under --check: the template + handler above are themselves
+# skipped by check mode (it previews the write, it doesn't perform it), so
+# grub.cfg is never actually regenerated to grep against. This self-check
+# can only give a real answer during an actual deploy.
+- name: Incus dropbear | Verify ip= landed in the generated grub.cfg
+  when: not ansible_check_mode
+  block:
+    - name: Incus dropbear | Read the generated grub.cfg for ip=
+      become: true
+      ansible.builtin.command:
+        cmd: grep -o 'ip=[^ "]*' /boot/grub/grub.cfg
+      register: incus_dropbear_grubcfg_ip
+      changed_when: false
+      failed_when: false
+
+    - name: Incus dropbear | Assert the expected ip= line is present
+      ansible.builtin.assert:
+        that:
+          - incus_dropbear_expected_ip in incus_dropbear_grubcfg_ip.stdout
+        fail_msg: >
+          Expected "{{ incus_dropbear_expected_ip }}" in /boot/grub/grub.cfg
+          but grep found: {{ incus_dropbear_grubcfg_ip.stdout }}.
+          /etc/default/grub.d/*.cfg may not be sourced the way this role
+          assumes on this Debian version — investigate before proceeding.
+      vars:
+        incus_dropbear_expected_ip: >-
+          {{ 'ip=' ~ incus_dropbear_client_ip ~ '::' ~ incus_network_bridge_gateway ~
+          ':' ~ incus_cluster_netmask ~ ':' ~ inventory_hostname_short ~ ':' ~
+          incus_network_bridge_uplink ~ ':off' }}
+
+# --- dropbear-initramfs -----------------------------------------------------
+
+- name: Incus dropbear | Install dropbear-initramfs
+  become: true
+  ansible.builtin.apt:
+    name:
+      - dropbear-initramfs
+      - cryptsetup-initramfs
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Incus dropbear | Configure dropbear-initramfs options
+  become: true
+  ansible.builtin.template:
+    src: dropbear.conf.j2
+    dest: /etc/dropbear/initramfs/dropbear.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Regenerate initramfs
+
+- name: Incus dropbear | Install the break-glass authorized_keys
+  become: true
+  ansible.builtin.template:
+    src: dropbear-authorized_keys.j2
+    dest: /etc/dropbear/initramfs/authorized_keys
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Regenerate initramfs
+
+# Regenerate now so the fingerprint task below reads the host keys this
+# play actually shipped, and so the play's success reflects a real,
+# up-to-date initramfs image rather than a pending handler.
+- name: Incus dropbear | Apply initramfs regeneration immediately
+  ansible.builtin.meta: flush_handlers
+
+# dropbear-initramfs autogenerates its host keys on first
+# update-initramfs run if they don't already exist yet — idempotent, no
+# key material for Ansible to manage. Glob rather than hardcode a
+# filename: the set of algorithms generated is a packaging detail, not
+# something this role should assume.
+- name: Incus dropbear | Find dropbear-initramfs host keys
+  become: true
+  ansible.builtin.find:
+    paths: /etc/dropbear/initramfs
+    patterns: "dropbear_*_host_key"
+  register: incus_dropbear_host_keys
+
+- name: Incus dropbear | Extract host key fingerprints
+  become: true
+  ansible.builtin.command:
+    cmd: "dropbearkey -y -f {{ item.path }}"
+  loop: "{{ incus_dropbear_host_keys.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: incus_dropbear_fingerprints
+  changed_when: false
+
+- name: Incus dropbear | Surface fingerprints for known_hosts verification
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }}: record this fingerprint before connecting
+      over dropbear-initramfs for the first time —
+      {{ item.stdout_lines | select('search', 'Fingerprint') | list }}
+  loop: "{{ incus_dropbear_fingerprints.results }}"
+  loop_control:
+    label: "{{ item.item.path }}"

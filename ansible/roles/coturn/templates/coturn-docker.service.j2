@@ -1,6 +1,7 @@
 [Unit]
 Description=Coturn Server Container
-After=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
 Requires=docker.service
 
 [Service]
@@ -8,9 +9,9 @@ LimitNOFILE=500000
 Restart=always
 WorkingDirectory={{ coturn_dir }}
 # Shutdown container (if running) when unit is started
-ExecStartPre=/usr/bin/docker compose -f docker-compose.yaml down
-ExecStart=/usr/bin/docker compose -f docker-compose.yaml up
-ExecStop=/usr/bin/docker compose -f docker-compose.yaml down
+ExecStartPre=/usr/bin/docker compose -f docker-compose.yml down
+ExecStart=/usr/bin/docker compose -f docker-compose.yml up
+ExecStop=/usr/bin/docker compose -f docker-compose.yml down
 
 [Install]
 WantedBy=multi-user.target

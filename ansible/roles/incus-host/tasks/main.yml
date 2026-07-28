@@ -1,0 +1,102 @@
+---
+- name: Incus | Configure Zabbly apt repository
+  ansible.builtin.import_tasks: repository.yml
+  tags:
+    - incus
+    - incus-repo
+
+- name: Incus | Install Incus
+  become: true
+  ansible.builtin.apt:
+    name: incus
+    state: present
+    update_cache: true
+  tags:
+    - incus
+    - incus-install
+
+- name: Incus | Install web UI (incus-ui-canonical)
+  become: true
+  ansible.builtin.apt:
+    name: incus-ui-canonical
+    state: present
+  when: incus_install_ui | bool
+  tags:
+    - incus
+    - incus-install
+    - incus-ui
+
+- name: Incus | Add ansible_user to incus-admin group
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: incus-admin
+    append: true
+  tags:
+    - incus
+    - incus-install
+
+- name: Incus | Ensure incus.service is enabled and running
+  become: true
+  ansible.builtin.systemd:
+    name: incus
+    state: started
+    enabled: true
+  tags:
+    - incus
+    - incus-install
+
+- name: Incus | Inspect current HTTPS listen address
+  become: true
+  ansible.builtin.command:
+    cmd: incus config get core.https_address
+  register: incus_current_listen
+  changed_when: false
+  tags:
+    - incus
+    - incus-config
+
+- name: Incus | Set HTTPS listen address
+  become: true
+  ansible.builtin.command:
+    cmd: incus config set core.https_address {{ incus_listen_address }}
+  when: incus_current_listen.stdout | trim != incus_listen_address
+  changed_when: true
+  tags:
+    - incus
+    - incus-config
+
+- name: Incus | Hardware metrics packages
+  ansible.builtin.import_tasks: hardware-metrics.yml
+  when: incus_install_hardware_metrics | bool
+  tags:
+    - incus
+    - incus-hardware-metrics
+
+- name: Incus | Storage pre-flight (LVM-thin)
+  ansible.builtin.import_tasks: storage.yml
+  when: incus_storage_validate | bool
+  tags:
+    - incus
+    - incus-storage
+
+- name: Incus | e1000e NIC offload workaround
+  ansible.builtin.import_tasks: e1000e-offload.yml
+  when: incus_e1000e_offload_fix | bool
+  tags:
+    - incus
+    - incus-nic
+
+- name: Incus | Network bridge (DESTRUCTIVE — read the role README first)
+  ansible.builtin.import_tasks: network-bridge.yml
+  when: incus_network_bridge_apply | bool
+  tags:
+    - incus
+    - incus-bridge
+
+- name: Incus | dropbear-initramfs remote LUKS unlock (opt-in — read tasks/dropbear.yml first)
+  ansible.builtin.import_tasks: dropbear.yml
+  when: incus_dropbear_enable | bool
+  tags:
+    - incus
+    - incus-dropbear

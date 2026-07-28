@@ -1,0 +1,9 @@
+-- Guest domain: anonymous participants join through this virtual host
+-- without an account. Internal to Jitsi/Prosody only — no DNS record,
+-- TLS cert, or web server config needed for it. Only accounts on the
+-- main VirtualHost (authentication = "internal_hashed", set by this
+-- role's lineinfile task) can create meetings; guests can join
+-- existing ones.
+VirtualHost "{{ jitsi_secure_domain_guest_subdomain }}.{{ jitsi_domain }}"
+    authentication = "jitsi-anonymous"
+    c2s_require_encryption = false

@@ -1,0 +1,6 @@
+// Appended as a top-level statement after Jitsi Meet's own
+// var/const config = {...}; declaration, same mechanism as
+// turn-config-block.js.j2 — mutating config.hosts works regardless of
+// whether the base file declared config with var or const.
+config.hosts = config.hosts || {};
+config.hosts.anonymousdomain = '{{ jitsi_secure_domain_guest_subdomain }}.{{ jitsi_domain }}';

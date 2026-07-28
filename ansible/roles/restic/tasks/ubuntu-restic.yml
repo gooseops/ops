@@ -1,0 +1,269 @@
+---
+- name: Restic | Assert NFS mount vars are set if the mount is enabled
+  ansible.builtin.assert:
+    that:
+      - restic_nfs_server | length > 0
+      - restic_nfs_export | length > 0
+    fail_msg: >
+      restic_nfs_mount_enabled is true but restic_nfs_server/
+      restic_nfs_export are not both set.
+  when: restic_nfs_mount_enabled
+  tags:
+    - restic
+
+- name: Restic | Assert every job has the required fields
+  ansible.builtin.assert:
+    that:
+      - item.name is defined and item.name | length > 0
+      - item.repository is defined and item.repository | length > 0
+      - item.password is defined and item.password | length > 0
+      - item.paths is defined and item.paths | length > 0
+    fail_msg: >
+      Every entry in restic_jobs needs name, repository, password, and
+      at least one path — see defaults/main.yml.
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name | default('(unnamed)') }}"
+  no_log: true
+  tags:
+    - restic
+
+- name: Restic | Install restic (and NFS client tools if mounting)
+  become: true
+  ansible.builtin.apt:
+    name: "{{ ['restic'] + (['nfs-common'] if restic_nfs_mount_enabled else []) }}"
+    state: present
+    update_cache: true
+  tags:
+    - restic
+
+- name: Restic | Mount the NFS backup share
+  become: true
+  ansible.posix.mount:
+    src: "{{ restic_nfs_server }}:{{ restic_nfs_export }}"
+    path: "{{ restic_nfs_mount_path }}"
+    fstype: nfs
+    opts: "{{ restic_nfs_mount_options }}"
+    state: mounted
+  when: restic_nfs_mount_enabled
+  tags:
+    - restic
+
+- name: Restic | Ensure /etc/restic exists (repository password files)
+  become: true
+  ansible.builtin.file:
+    path: /etc/restic
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  tags:
+    - restic
+
+- name: Restic | Write per-job repository password files
+  become: true
+  ansible.builtin.copy:
+    content: "{{ item.password }}"
+    dest: "/etc/restic/{{ item.name }}.password"
+    owner: root
+    group: root
+    mode: "0600"
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+  tags:
+    - restic
+
+# Idempotency: `restic init` fails on an already-initialized repo, so
+# check first rather than always attempting it. `restic snapshots`
+# against an uninitialized repo path fails cleanly (non-zero exit,
+# no side effects) — that failure is the signal to initialize, not an
+# error to react to.
+- name: Restic | Check whether each job's repository is already initialized
+  become: true
+  ansible.builtin.command:
+    cmd: restic snapshots --json
+  environment:
+    RESTIC_REPOSITORY: "{{ item.repository }}"
+    RESTIC_PASSWORD_FILE: "/etc/restic/{{ item.name }}.password"
+  register: restic_repo_check
+  changed_when: false
+  failed_when: false
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags:
+    - restic
+
+- name: Restic | Initialize repositories that don't exist yet
+  become: true
+  ansible.builtin.command:
+    cmd: restic init
+  environment:
+    RESTIC_REPOSITORY: "{{ item.item.repository }}"
+    RESTIC_PASSWORD_FILE: "/etc/restic/{{ item.item.name }}.password"
+  loop: "{{ restic_repo_check.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: item.rc != 0
+  changed_when: true
+  tags:
+    - restic
+
+- name: Restic | Ensure the backup script directory exists
+  become: true
+  ansible.builtin.file:
+    path: /usr/local/libexec/restic
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - restic
+
+- name: Restic | Template per-job backup script
+  become: true
+  ansible.builtin.template:
+    src: restic-backup.sh.j2
+    dest: "/usr/local/libexec/restic/{{ item.name }}-backup.sh"
+    owner: root
+    group: root
+    mode: "0700"
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    job: "{{ item }}"
+  tags:
+    - restic
+
+- name: Restic | Template per-job backup systemd service
+  become: true
+  ansible.builtin.template:
+    src: restic-backup.service.j2
+    dest: "/etc/systemd/system/restic-backup-{{ item.name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    job: "{{ item }}"
+  tags:
+    - restic
+
+- name: Restic | Template per-job backup systemd timer
+  become: true
+  ansible.builtin.template:
+    src: restic-backup.timer.j2
+    dest: "/etc/systemd/system/restic-backup-{{ item.name }}.timer"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    job: "{{ item }}"
+  tags:
+    - restic
+
+- name: Restic | Template per-job integrity-check systemd service
+  become: true
+  ansible.builtin.template:
+    src: restic-check.service.j2
+    dest: "/etc/systemd/system/restic-check-{{ item.name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    job: "{{ item }}"
+  tags:
+    - restic
+
+- name: Restic | Template per-job integrity-check systemd timer
+  become: true
+  ansible.builtin.template:
+    src: restic-check.timer.j2
+    dest: "/etc/systemd/system/restic-check-{{ item.name }}.timer"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    job: "{{ item }}"
+  tags:
+    - restic
+
+- name: Restic | Reload systemd
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+  tags:
+    - restic
+
+- name: Restic | Enable and start the backup and check timers
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ item.1 }}-{{ item.0.name }}.timer"
+    enabled: true
+    state: started
+  loop: "{{ restic_jobs | product(['restic-backup', 'restic-check']) | list }}"
+  loop_control:
+    label: "{{ item.1 }}-{{ item.0.name }}"
+  tags:
+    - restic
+
+# Real correctness check, not just "did apt/systemd exit 0" — run the
+# first backup right now instead of waiting for the timer, then verify
+# a snapshot actually landed. `state: started` on a oneshot service
+# blocks until the unit finishes (success or failure), so this task
+# doesn't return until the backup script has actually run to
+# completion.
+- name: Restic | Run the first backup now for each job
+  become: true
+  ansible.builtin.systemd:
+    name: "restic-backup-{{ item.name }}.service"
+    state: started
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags:
+    - restic
+
+- name: Restic | Verify each job produced at least one snapshot
+  become: true
+  ansible.builtin.command:
+    cmd: restic snapshots --json
+  environment:
+    RESTIC_REPOSITORY: "{{ item.repository }}"
+    RESTIC_PASSWORD_FILE: "/etc/restic/{{ item.name }}.password"
+  register: restic_snapshot_check
+  changed_when: false
+  loop: "{{ restic_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  tags:
+    - restic
+
+- name: Restic | Assert each job has at least one snapshot
+  ansible.builtin.assert:
+    that:
+      - (item.stdout | from_json) | length > 0
+    fail_msg: >
+      Job {{ item.item.name }} ran without producing a snapshot — check
+      `journalctl -u restic-backup-{{ item.item.name }}.service` on the
+      host (a common cause is a path in restic_jobs[].paths that
+      doesn't exist or isn't readable by root).
+  loop: "{{ restic_snapshot_check.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  tags:
+    - restic

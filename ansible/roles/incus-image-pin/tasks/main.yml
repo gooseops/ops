@@ -1,0 +1,61 @@
+---
+# Refresh the cluster's locally-pinned cloud image. Idempotent: deletes
+# any existing local alias, then re-copies the current upstream with
+# --auto-update=false so the pinned fingerprint stays put until the next
+# deliberate refresh.
+#
+# Intended to run on exactly one cluster member (e.g. an [image_builders]
+# inventory group). Incus replicates the imported image to other members
+# lazily on first use.
+
+- name: Image pin | Show current pin (if any)
+  ansible.builtin.command:
+    cmd: incus image list {{ incus_image_pin_alias }} --columns lfdsut
+  register: _current_pin
+  changed_when: false
+  failed_when: false
+  tags:
+    - incus-image-pin
+
+- name: Image pin | Display current pin
+  ansible.builtin.debug:
+    var: _current_pin.stdout_lines
+  tags:
+    - incus-image-pin
+
+- name: Image pin | Delete existing local pin (if present)
+  ansible.builtin.command:
+    cmd: incus image delete {{ incus_image_pin_alias }}
+  register: _delete
+  changed_when: _delete.rc == 0
+  failed_when: false
+  tags:
+    - incus-image-pin
+
+- name: Image pin | Copy upstream VM image with auto-update disabled
+  # --vm pulls the virtual-machine variant of the alias. Without it,
+  # `incus image copy` defaults to the container variant — same alias,
+  # different image, useless for VM instances.
+  ansible.builtin.command:
+    cmd: >-
+      incus image copy {{ incus_image_pin_upstream }} local:
+      --alias {{ incus_image_pin_alias }}
+      --vm
+      --auto-update=false
+  changed_when: true
+  tags:
+    - incus-image-pin
+
+- name: Image pin | Capture new pin
+  ansible.builtin.command:
+    cmd: incus image list {{ incus_image_pin_alias }} --columns lfdsut
+  register: _new_pin
+  changed_when: false
+  tags:
+    - incus-image-pin
+
+- name: Image pin | Display new pin
+  ansible.builtin.debug:
+    var: _new_pin.stdout_lines
+  tags:
+    - incus-image-pin

@@ -1,0 +1,81 @@
+#!/usr/sbin/nft -f
+# Managed by Ansible (firewall role)
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        ct state established,related accept
+        ct state invalid drop
+
+        iifname lo accept
+
+        ip protocol icmp accept
+        ip6 nexthdr ipv6-icmp accept
+
+{% for cidr in firewall_management_cidrs %}
+        ip saddr {{ cidr }} tcp dport 22 accept comment "ssh from management"
+{% endfor %}
+
+{% if firewall_metrics_tcp_ports %}
+{% for cidr in firewall_metrics_cidrs %}
+        ip saddr {{ cidr }} tcp dport { {{ firewall_metrics_tcp_ports | join(', ') }} } accept comment "metrics scrape"
+{% endfor %}
+{% endif %}
+
+{% if firewall_extra_tcp_ports %}
+{% for cidr in firewall_cluster_cidrs %}
+        ip saddr {{ cidr }} tcp dport { {{ firewall_extra_tcp_ports | join(', ') }} } accept comment "host-class tcp"
+{% endfor %}
+{% endif %}
+
+{% if firewall_extra_udp_ports %}
+{% for cidr in firewall_cluster_cidrs %}
+        ip saddr {{ cidr }} udp dport { {{ firewall_extra_udp_ports | join(', ') }} } accept comment "host-class udp"
+{% endfor %}
+{% endif %}
+
+{% if firewall_public_tcp_ports %}
+        tcp dport { {{ firewall_public_tcp_ports | join(', ') }} } accept comment "public-internet tcp"
+{% endif %}
+
+{% if firewall_public_udp_ports %}
+        udp dport { {{ firewall_public_udp_ports | join(', ') }} } accept comment "public-internet udp"
+{% endif %}
+
+{% if firewall_allow_pod_forward %}
+        iifname "cilium_*" accept comment "cilium host iface to local services"
+        iifname "lxc*" accept comment "pod-to-host on this node"
+{% endif %}
+
+{% if firewall_allow_wg_forward %}
+        iifname "wg0" accept comment "wireguard overlay to local services"
+{% endif %}
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid drop
+{% if firewall_allow_pod_forward %}
+        iifname { "cilium_*", "lxc*" } accept comment "pod ingress via cilium"
+        oifname { "cilium_*", "lxc*" } accept comment "pod egress via cilium"
+{% endif %}
+{% if firewall_wg_mss_clamp %}
+        oifname "wg0" tcp flags syn tcp option maxseg size set rt mtu comment "clamp MSS to wg0 path MTU (forward)"
+{% endif %}
+{% if firewall_allow_wg_forward %}
+        iifname "wg0" accept comment "wg ingress to host"
+        oifname "wg0" accept comment "wg egress from host"
+{% endif %}
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+{% if firewall_wg_mss_clamp %}
+        oifname "wg0" tcp flags syn tcp option maxseg size set rt mtu comment "clamp MSS to wg0 path MTU (output)"
+{% endif %}
+    }
+}

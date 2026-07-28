@@ -1,0 +1,51 @@
+---
+# All CIDR lists default to empty on purpose. The role asserts they are
+# non-empty before rendering, so an unconfigured environment fails loud
+# instead of silently relying on a default that is almost certainly
+# wrong for the surrounding network. Set real values in
+# ansible/inventory/group_vars/all.yml (or a tighter group_vars scope).
+
+firewall_management_cidrs: []
+firewall_metrics_cidrs: []
+firewall_cluster_cidrs: []
+firewall_extra_tcp_ports: []
+firewall_extra_udp_ports: []
+# TCP ports the metrics scrape ACL opens to firewall_metrics_cidrs.
+# 9100 is node-exporter, which lives on every host class via the
+# node-exporter role. Host classes that also export metrics from
+# another process extend this list in their group_vars file. Empty list
+# disables the metrics ACL entirely.
+firewall_metrics_tcp_ports:
+  - 9100
+# When true, the input and forward chains accept traffic on Cilium-
+# managed interfaces (cilium_* for the host devices, lxc* for per-pod
+# veth peers). Required on Kubernetes nodes so that pods can reach
+# host-network services on their own node (input) and so that pod
+# traffic can cross nodes or egress to the internet (forward). Off
+# everywhere else — hosts that don't route pod traffic should stay
+# strict.
+firewall_allow_pod_forward: false
+
+# Public-internet inbound ports. Unlike firewall_extra_*_ports
+# (which are restricted to firewall_cluster_cidrs), these are
+# accepted from anywhere. Reserve for hosts that genuinely face the
+# public internet. Empty default is the safe choice; opting in is
+# per-group_vars or per-host.
+firewall_public_tcp_ports: []
+firewall_public_udp_ports: []
+# When true, the role accepts traffic arriving on the wg0 WireGuard
+# interface in the input chain (so an in-cluster service can reach
+# something over the tunnel) and accepts forwarding through wg0 in the
+# forward chain (defensive — most hosts won't forward, but the rule is
+# cheap and matches the same pattern used for pod traffic).
+firewall_allow_wg_forward: false
+
+# When true, the output and forward chains clamp TCP MSS on SYN
+# packets leaving via wg0 to the route's MTU (which equals wg0's
+# MTU). Guards against PMTU blackholes — paths that drop ICMP
+# "fragmentation needed" between the WG endpoints will otherwise
+# silently truncate large segments and stall flows like HTTPS
+# responses or database replication mid-stream. Off by default;
+# enable per group_vars on the host classes that actually run wg0 so
+# non-WG hosts don't carry a wg0-named rule in their nftables ruleset.
+firewall_wg_mss_clamp: false

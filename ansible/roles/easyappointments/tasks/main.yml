@@ -1,0 +1,6 @@
+---
+- name: Easy!Appointments Role
+  ansible.builtin.import_tasks: ubuntu-easyappointments.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - easyappointments

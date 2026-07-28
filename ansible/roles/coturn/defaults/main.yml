@@ -1,3 +1,64 @@
 ---
-coturn_dir: /home/{{ ansible_user }}/coturn
+coturn_dir: "/home/{{ ansible_user }}/coturn"
 coturn_version: "4.7-alpine"
+
+# Public hostname clients resolve to reach this TURN server, and the
+# domain this role issues a Let's Encrypt cert for.
+coturn_domain: ""
+coturn_email: ""
+
+# TLS cert/key on the HOST filesystem (certbot --standalone issues
+# these — this role does not assume nginx is fronting this host, since
+# coturn's own protocol isn't HTTP and there's nothing for a reverse
+# proxy to do here). Mounted read-only into the container by
+# docker-compose.yml.j2.
+coturn_tls_cert_path: "/etc/letsencrypt/live/{{ coturn_domain }}/fullchain.pem"
+coturn_tls_key_path: "/etc/letsencrypt/live/{{ coturn_domain }}/privkey.pem"
+
+# Realm presented to clients during authentication.
+coturn_realm: "{{ coturn_domain }}"
+
+# ----------------------------------------------------------------- #
+# NAT / CGNAT address mapping. THIS is the option that solves "TURN
+# behind CGNAT" — see the role README for the full story.
+# ----------------------------------------------------------------- #
+# If this coturn instance's host doesn't have a real public IP bound
+# directly to its NIC (a home network on CGNAT, a cloud VM reached via
+# a floating/NAT'd public IP, etc.), every TURN relay address it hands
+# out defaults to its own private address — useless to clients on the
+# public internet. Setting both halves of this mapping fixes that.
+# Empty by default (no mapping applied): a host with a real public IP
+# directly on its NIC doesn't need this at all. Both must be set
+# together or neither — the role asserts this.
+coturn_external_public_ip: ""
+coturn_external_private_ip: ""
+
+# ----------------------------------------------------------------- #
+# Authentication. Two mutually exclusive modes (coturn itself refuses
+# to run both at once) — pick one:
+#
+#   "static_user" (default): a single long-term-credential username/
+#   password, coturn's simplest mode. This is what the ops jitsi role's
+#   client-side TURN config (config.js) can actually consume directly —
+#   see that role's README for why the more modern secret-based mode
+#   isn't wired into a plain config.js. Matches the credential you set
+#   in jitsi_turn_username/jitsi_turn_password on the jitsi role if
+#   you're pairing the two.
+#
+#   "secret": coturn's TURN REST API mode — time-limited credentials
+#   derived from a shared secret, no single long-lived password to
+#   leak. More robust, but not what this repo's jitsi role's config.js
+#   templating uses (yet) — available here for other consumers of this
+#   role, or for a future jitsi-role improvement that computes
+#   time-limited credentials via JVB's own integration instead of
+#   static config.js entries.
+# ----------------------------------------------------------------- #
+coturn_auth_mode: "static_user" # "static_user" or "secret"
+
+coturn_static_username: ""
+coturn_static_password: ""
+
+coturn_static_auth_secret: ""
+
+coturn_min_port: 49152
+coturn_max_port: 65535

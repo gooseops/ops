@@ -1,0 +1,13 @@
+# Managed by Ansible (restic role)
+[Unit]
+Description=Restic repository integrity check ({{ job.name }})
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=RESTIC_REPOSITORY={{ job.repository }}
+Environment=RESTIC_PASSWORD_FILE=/etc/restic/{{ job.name }}.password
+ExecStart=/usr/bin/restic check
+StandardOutput=journal
+StandardError=journal

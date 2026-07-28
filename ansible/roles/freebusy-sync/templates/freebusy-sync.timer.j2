@@ -1,0 +1,10 @@
+[Unit]
+Description=Run freebusy-sync on a schedule
+
+[Timer]
+OnCalendar={{ freebusy_sync_on_calendar }}
+RandomizedDelaySec={{ freebusy_sync_randomized_delay_sec }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target
