@@ -53,6 +53,9 @@ services:
 {% if easyappointments_favicon_url | length > 0 %}
       - /opt/easyappointments/config/favicon.ico:/var/www/html/assets/img/favicon.ico:ro
 {% endif %}
+{% if easyappointments_social_card_url | length > 0 %}
+      - /opt/easyappointments/config/social-card.png:/var/www/html/assets/img/social-card.png:ro
+{% endif %}
     ports:
       - "{{ easyappointments_http_port }}:80"
     depends_on:

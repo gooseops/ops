@@ -1,0 +1,108 @@
+---
+# This role assumes Docker is already installed on the system (the
+# docker role, run first — see dolibarr.playbook.yml) and that a
+# reachable Postgres database/user for Dolibarr already exists (the
+# shared postgresql role, run separately against your db host — see
+# defaults/main.yml).
+
+- name: Dolibarr | Assert required secrets and Postgres host are set
+  ansible.builtin.assert:
+    that:
+      - dolibarr_postgres_host | length > 0
+      - dolibarr_postgres_password | length > 0
+      - dolibarr_admin_login | length > 0
+      - dolibarr_admin_password | length > 0
+      - dolibarr_url_root | length > 0
+    fail_msg: >
+      One or more required Dolibarr variables are unset
+      (dolibarr_postgres_host, dolibarr_postgres_password,
+      dolibarr_admin_login, dolibarr_admin_password, dolibarr_url_root).
+      Source these through group_vars/host_vars in your inventory repo
+      before running this role — see defaults/main.yml.
+  tags:
+    - dolibarr
+
+- name: Dolibarr | Create install directory
+  become: true
+  ansible.builtin.file:
+    path: /opt/dolibarr
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  tags:
+    - dolibarr
+
+- name: Dolibarr | Install Docker Compose file
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/dolibarr/docker-compose.yml
+    owner: root
+    group: root
+    mode: "0600" # env block carries secrets in plaintext
+  tags:
+    - dolibarr
+
+- name: Dolibarr | Deploy via Docker Compose
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: /opt/dolibarr
+    state: present
+  register: dolibarr_compose
+  tags:
+    - dolibarr
+
+# community.postgresql.postgresql_query runs on THIS host (the dolibarr
+# VM), not the postgres host — needs psycopg2 present here. Nothing else
+# pulls it in: Dolibarr is fully containerized (unlike odoo, which gets
+# it for free as an actual dependency of the odoo package itself), so
+# nothing on this host would otherwise ever need it.
+- name: Dolibarr | Install psycopg2 (for the Postgres check below)
+  become: true
+  ansible.builtin.apt:
+    name: python3-psycopg2
+    state: present
+    update_cache: true
+  tags:
+    - dolibarr
+
+# DOLI_DB_TYPE=pgsql disables the automated installer (see the README) —
+# the install wizard has to be completed by hand in the browser once.
+# This role can't drive that wizard, but it CAN detect when it's done
+# and take over from there: llx_user is Dolibarr's own core user table
+# (llx_ is its default table prefix), so its existence is solid evidence
+# the wizard actually completed, not just that someone visited the page.
+# Same pattern as the odoo role's schema-init check.
+- name: Dolibarr | Check whether the install wizard has completed
+  community.postgresql.postgresql_query:
+    login_host: "{{ dolibarr_postgres_host }}"
+    login_port: "{{ dolibarr_postgres_port }}"
+    login_user: "{{ dolibarr_postgres_user }}"
+    login_password: "{{ dolibarr_postgres_password }}"
+    db: "{{ dolibarr_postgres_database }}"
+    query: "SELECT to_regclass('public.llx_user') IS NOT NULL AS installed;"
+  register: dolibarr_install_check
+  no_log: true
+  tags:
+    - dolibarr
+
+# Deliberately no manual toggle var for this — detecting real state (the
+# query above) is strictly better than a human-flipped flag that has to
+# be remembered and re-flipped correctly. Runs unconditionally once the
+# wizard is done; the test -f guard inside the command itself (not a
+# separate check task) is what makes re-running harmless and accurately
+# reported as unchanged. /var/www/documents is this role's own compose
+# mount point for dolibarr-documents — not /var/www/html/documents (the
+# path Dolibarr's own docs use, presumably a symlink to the same place
+# inside the container) — using the path this role actually controls
+# rather than assuming a symlink exists.
+- name: Dolibarr | Lock the installer once the wizard has completed
+  community.docker.docker_container_exec:
+    container: dolibarr-web
+    command: sh -c "test -f /var/www/documents/install.lock || (touch /var/www/documents/install.lock && echo CREATED)"
+  register: dolibarr_lock_result
+  when: dolibarr_install_check.query_result[0].installed
+  changed_when: "'CREATED' in dolibarr_lock_result.stdout"
+  tags:
+    - dolibarr

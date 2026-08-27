@@ -11,9 +11,9 @@
 while getopts ":hi:v:y" o; do
     case "${o}" in
         h) echo "help function";;
-        i) declare start_vmid="${OPTARG}";; 
+        i) declare start_vmid="${OPTARG}";;
         v) echo "You are using ${OPTARG} for your boot disk on these vms";;
-        y) declare -g mode_noninteractive=true ;; 
+        y) declare -g mode_noninteractive=true ;;
         *) echo "you broke this";;
     esac
 done
@@ -44,7 +44,7 @@ function packages_error {
 function packages_check {
     echo "Verifying necessary packages..."
     sleep 2
-    for package in "${packages[@]}"; do 
+    for package in "${packages[@]}"; do
     type "${package}" >/dev/null 2>&1 || packages_error
     done
     echo "The required packages for running this script are installed."
@@ -76,12 +76,12 @@ echo "Creating templates serially beginning at VMID: ${start_vmid}..."
 sleep 2
 
 declare images=(
-    "ubuntu-focal-amd64,https://cloud-images.ubuntu.com/minimal/releases/focal/release/ubuntu-20.04-minimal-cloudimg-amd64.img"
     "ubuntu-jammy-amd64,https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
-    "ubuntu-jammy-server-amd64,https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
     "ubuntu-noble-amd64,https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img"
+    "ubuntu-resolute-amd64,https://cloud-images.ubuntu.com/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-amd64.img"
     "debian-bullseye-amd64,https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2"
     "debian-bookworm-amd64,https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
+    "debian-trixie-amd64,https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
 )
 
 function template_vmid_error {
@@ -99,7 +99,7 @@ function template_name_check  {
                 sleep 5
                 qm destroy "${vmid}" --destroy-unreferenced-disks=1
             else
-                echo "Do you wish to continue?" 
+                echo "Do you wish to continue?"
                 echo "Enter 'y' for yes or 'n' for no."
                 read -r input < /dev/tty
                 if [ "${input}" == "y" ]; then
@@ -114,8 +114,8 @@ function template_name_check  {
     done < <(qm list | awk 'NR>1{print $1 FS $2}')
 }
 
-function create_template {  
-    
+function create_template {
+
     wget -O /tmp/"${template_name}.qcow2" "${download_url}"
     virt-customize -a /tmp/"${template_name}.qcow2" --install qemu-guest-agent
     qm create "${template_id}" --name "${template_name}" --memory 512 --cores 1 --net0 virtio,bridge=vmbr0 || template_vmid_error

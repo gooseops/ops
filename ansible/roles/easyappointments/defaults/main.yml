@@ -28,6 +28,22 @@ easyappointments_base_url: ""
 # rather than describing the role itself.
 easyappointments_favicon_url: ""
 
+# Optional. URL to a social-card.png (Open Graph preview image, referenced
+# via the og:image meta tag in application/views/layouts/booking_layout.php)
+# to fetch and bind-mount over the upstream default at
+# assets/img/social-card.png — same mechanism and same reasoning as
+# easyappointments_favicon_url above.
+easyappointments_social_card_url: ""
+
+# sha256 of the file at easyappointments_social_card_url, verified at fetch
+# time via get_url's checksum param — unlike the favicon (a small icon,
+# low-stakes if swapped), this is fetched from a URL on the live public
+# site rather than a private inventory host, so pin the expected hash to
+# catch a tampered or unexpectedly-changed asset rather than bind-mounting
+# whatever the URL happens to return. Required (asserted below) whenever
+# easyappointments_social_card_url is set.
+easyappointments_social_card_sha256: ""
+
 easyappointments_language: "english"
 easyappointments_debug_mode: false
 
@@ -84,3 +100,33 @@ easyappointments_mail_reply_to_address: ""
 # login — there is no environment variable or role-level config for
 # it. See the README for the Nextcloud pairing notes.
 # ----------------------------------------------------------------- #
+
+# ----------------------------------------------------------------- #
+# Scheduled calendar sync — runs `php index.php console sync` inside
+# the app container on a systemd timer (see
+# tasks/ubuntu-easyappointments.yml and the README's "Scheduled
+# calendar sync" section). Neither Google Calendar sync nor CalDAV
+# sync polls the remote calendar on its own — Easy!Appointments' own
+# docs say sync "can only be triggered from the backend or whenever
+# there are changes in the appointment plan" locally — so a change
+# made directly on the remote calendar never reaches
+# Easy!Appointments until something calls this console command.
+# Per-provider sync still only gets enabled in the admin UI (see
+# above); this just makes sure it actually runs on a schedule once it
+# is. Scheduled as a systemd timer, not cron — see freebusy-sync and
+# restic for the same pattern; ansible.builtin.cron has no uses
+# anywhere in this repo.
+# ----------------------------------------------------------------- #
+easyappointments_sync_enabled: true
+
+# Matches freebusy-sync's own interval (see that role's
+# defaults/main.yml) — same class of risk (a stale remote calendar can
+# let a customer double-book a slot the provider already took
+# elsewhere), so this borrows the same cadence rather than picking a
+# new one.
+easyappointments_sync_on_calendar: "minutely"
+# Must stay well under the interval above — see freebusy-sync's
+# defaults/main.yml for why a RandomizedDelaySec close to or over the
+# OnCalendar period makes the timer's actual firing pattern
+# unpredictable instead of just jittered.
+easyappointments_sync_randomized_delay_sec: "5"

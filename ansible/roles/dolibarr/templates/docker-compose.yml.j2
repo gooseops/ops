@@ -1,0 +1,34 @@
+---
+services:
+  web:
+    image: "dolibarr/dolibarr:{{ dolibarr_version }}"
+    container_name: dolibarr-web
+    restart: unless-stopped
+    environment:
+      DOLI_DB_TYPE: pgsql
+      DOLI_DB_HOST: "{{ dolibarr_postgres_host }}"
+      DOLI_DB_HOST_PORT: "{{ dolibarr_postgres_port }}"
+      DOLI_DB_NAME: "{{ dolibarr_postgres_database }}"
+      DOLI_DB_USER: "{{ dolibarr_postgres_user }}"
+      DOLI_DB_PASSWORD: "{{ dolibarr_postgres_password }}"
+      DOLI_URL_ROOT: "{{ dolibarr_url_root }}"
+      DOLI_ADMIN_LOGIN: "{{ dolibarr_admin_login }}"
+      DOLI_ADMIN_PASSWORD: "{{ dolibarr_admin_password }}"
+      # Always 0 with DOLI_DB_TYPE=pgsql — the official image's automated
+      # installer only supports MySQL/MariaDB. Left explicit rather than
+      # relying on the image's own default so this doesn't silently
+      # change behavior if that default ever changes upstream. See the
+      # README for the manual first-run wizard this requires instead.
+      DOLI_INSTALL_AUTO: "0"
+      DOLI_CRON: "{{ '1' if dolibarr_cron_enabled else '0' }}"
+    volumes:
+      - dolibarr-documents:/var/www/documents
+      - dolibarr-custom:/var/www/html/custom
+    ports:
+      - "{{ dolibarr_http_port }}:80"
+
+volumes:
+  dolibarr-documents:
+    name: dolibarr-documents
+  dolibarr-custom:
+    name: dolibarr-custom

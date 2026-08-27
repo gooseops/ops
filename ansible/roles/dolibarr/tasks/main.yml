@@ -1,0 +1,6 @@
+---
+- name: Dolibarr Role
+  ansible.builtin.import_tasks: ubuntu-dolibarr.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags:
+    - dolibarr

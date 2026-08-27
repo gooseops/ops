@@ -20,6 +20,18 @@
   tags:
     - easyappointments
 
+- name: Easy!Appointments | Assert social card checksum is set if URL is set
+  ansible.builtin.assert:
+    that:
+      - easyappointments_social_card_sha256 | length > 0
+    fail_msg: >
+      easyappointments_social_card_url is set but
+      easyappointments_social_card_sha256 is not — set the expected
+      sha256 of that file so get_url can verify it on fetch.
+  when: easyappointments_social_card_url | length > 0
+  tags:
+    - easyappointments
+
 - name: Easy!Appointments | Create install directory
   become: true
   ansible.builtin.file:
@@ -75,6 +87,26 @@
   tags:
     - easyappointments
 
+# Same bind-mount mechanism as the favicon above, but for the Open Graph
+# preview image (see defaults/main.yml). checksum verifies the fetched
+# file matches easyappointments_social_card_sha256 — this URL points at
+# the live public site rather than a private inventory host, so pin the
+# hash rather than trusting whatever the URL returns. force: false means
+# this only re-fetches if the checksum no longer matches what's on disk,
+# not on every run.
+- name: Easy!Appointments | Fetch custom social card
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ easyappointments_social_card_url }}"
+    dest: /opt/easyappointments/config/social-card.png
+    checksum: "sha256:{{ easyappointments_social_card_sha256 }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: easyappointments_social_card_url | length > 0
+  tags:
+    - easyappointments
+
 - name: Easy!Appointments | Install Docker Compose file
   become: true
   ansible.builtin.template:
@@ -92,5 +124,91 @@
     project_src: /opt/easyappointments
     state: present
   register: easyappointments_compose
+  tags:
+    - easyappointments
+
+# ----------------------------------------------------------------- #
+# Scheduled calendar sync. See defaults/main.yml for why this exists
+# and the README's "Scheduled calendar sync" section for the full
+# story — systemd timer, not cron, matching this repo's convention
+# (restic, freebusy-sync).
+# ----------------------------------------------------------------- #
+
+- name: Easy!Appointments | Template the sync systemd service
+  become: true
+  ansible.builtin.template:
+    src: easyappointments-sync.service.j2
+    dest: /etc/systemd/system/easyappointments-sync.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: easyappointments_sync_enabled
+  tags:
+    - easyappointments
+
+- name: Easy!Appointments | Template the sync systemd timer
+  become: true
+  ansible.builtin.template:
+    src: easyappointments-sync.timer.j2
+    dest: /etc/systemd/system/easyappointments-sync.timer
+    owner: root
+    group: root
+    mode: "0644"
+  when: easyappointments_sync_enabled
+  tags:
+    - easyappointments
+
+- name: Easy!Appointments | Reload systemd
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: easyappointments_sync_enabled
+  tags:
+    - easyappointments
+
+- name: Easy!Appointments | Enable and start the sync timer
+  become: true
+  ansible.builtin.systemd:
+    name: easyappointments-sync.timer
+    enabled: true
+    state: started
+  when: easyappointments_sync_enabled
+  tags:
+    - easyappointments
+
+# Real correctness check, not just "did systemctl start exit 0" — call
+# the console command directly through the same docker exec path the
+# timer uses and inspect its actual output. docker_container_exec does
+# NOT fail the task on a non-zero exit code on its own (unlike
+# ansible.builtin.command), so rc has to be checked explicitly. The
+# text check on top of that guards against CodeIgniter's console
+# command reporting rc 0 after catching a PHP fatal error internally —
+# same "exit code says success, nothing actually happened" trap as
+# odoo's wkhtmltopdf decoy package (see that role's README).
+- name: Easy!Appointments | Run the sync now and verify it actually ran
+  become: true
+  community.docker.docker_container_exec:
+    container: easyappointments-app
+    command: php index.php console sync
+    chdir: /var/www/html
+  register: easyappointments_sync_check
+  when: easyappointments_sync_enabled
+  tags:
+    - easyappointments
+
+- name: Easy!Appointments | Assert the sync command ran cleanly
+  ansible.builtin.assert:
+    that:
+      - easyappointments_sync_check.rc == 0
+      - "'fatal error' not in easyappointments_sync_check.stdout | lower"
+      - "'fatal error' not in easyappointments_sync_check.stderr | lower"
+    fail_msg: >
+      php index.php console sync did not run cleanly inside
+      easyappointments-app (rc={{ easyappointments_sync_check.rc }},
+      stdout: {{ easyappointments_sync_check.stdout }}, stderr:
+      {{ easyappointments_sync_check.stderr }}) — check `docker logs
+      easyappointments-app` before trusting the timer to run this on
+      schedule.
+  when: easyappointments_sync_enabled
   tags:
     - easyappointments

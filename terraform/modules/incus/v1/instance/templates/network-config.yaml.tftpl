@@ -1,0 +1,38 @@
+# cloud-init's systemd-networkd renderer copies the netplan device-id
+# key below verbatim into the rendered [Match] Name= field; it ignores any
+# nested `match:` clause. Using systemd-networkd-style globs as the keys
+# produces .network files that match whatever the kernel actually called
+# the NIC, without us having to know its predictable-interface-name in
+# advance. Two entries cover the standard cases:
+#   - "en*" — modern systemd predictable names (enp5s0, eno1, ens3, …)
+#   - "eth*" — legacy kernel-assigned names (eth0), if predictable
+#     naming is disabled at boot
+# Only one will match per VM (single-NIC topology); the other is inert.
+version: 2
+ethernets:
+  "en*":
+    dhcp4: false
+    dhcp6: false
+    addresses:
+      - ${ipv4_address}/${ipv4_prefix}
+    routes:
+      - to: 0.0.0.0/0
+        via: ${gateway}
+    nameservers:
+      addresses:
+%{ for ns in nameservers ~}
+        - ${ns}
+%{ endfor ~}
+  "eth*":
+    dhcp4: false
+    dhcp6: false
+    addresses:
+      - ${ipv4_address}/${ipv4_prefix}
+    routes:
+      - to: 0.0.0.0/0
+        via: ${gateway}
+    nameservers:
+      addresses:
+%{ for ns in nameservers ~}
+        - ${ns}
+%{ endfor ~}
