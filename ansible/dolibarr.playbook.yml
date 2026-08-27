@@ -1,0 +1,22 @@
+---
+- name: Dolibarr
+  hosts: dolibarr
+  roles:
+    - role: docker
+    - role: dolibarr
+    - role: nginx-base
+    - role: nginx-proxy
+
+## Dolibarr needs a reachable Postgres database + user before this play
+## will come up healthy — run the postgresql role against your shared DB
+## host separately (see postgresql.playbook.yml), with a "dolibarr"
+## entry added to that role's postgresql_databases/postgresql_users/
+## postgresql_hba_entries in your inventory repo's group_vars/postgresql.yml,
+## the same way synapse/vaultwarden/mattermost/authentik/odoo already do it.
+##
+## First run: DOLI_DB_TYPE=pgsql disables Dolibarr's automated installer
+## (the official image only automates install against MySQL/MariaDB) —
+## after this play finishes, visit dolibarr_url_root/install and
+## complete the setup wizard by hand, then see the role's README for the
+## install.lock step that follows. Not a role bug — this is how
+## Dolibarr's own image handles Postgres.

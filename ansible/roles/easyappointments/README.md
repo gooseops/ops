@@ -61,6 +61,34 @@ one CalDAV calendar per provider, and recurring events aren't fully
 supported — plan the provider's Nextcloud calendar layout accordingly
 if that matters for your setup.
 
+## Scheduled calendar sync
+
+Neither Google Calendar sync nor CalDAV sync polls the remote calendar
+on its own — Easy!Appointments' [own console docs](https://easyappointments.org/documentation/console/)
+say sync "can only be triggered from the Easy!Appointments backend or
+whenever there are changes in the appointment plan" locally. A change
+made directly on the remote side (a provider edits their actual Google
+Calendar or Nextcloud calendar, not through Easy!Appointments) never
+reaches Easy!Appointments until something calls its
+`php index.php console sync` CLI command — so without a scheduled
+trigger, the "Pairing with Nextcloud Calendar" setup above only ever
+syncs one direction promptly (Easy!Appointments → remote, on booking)
+and catches up on the other direction (remote → Easy!Appointments)
+only when someone happens to open the backend.
+
+This role deploys that command as a systemd service+timer pair
+(`easyappointments_sync_enabled`, default `true`) — a timer, not
+`ansible.builtin.cron`, matching this repo's existing convention (see
+`restic`, `freebusy-sync`). `easyappointments-sync.service` runs
+`docker exec easyappointments-app php index.php console sync` as a
+`Type=oneshot` unit; `easyappointments-sync.timer` fires it on
+`easyappointments_sync_on_calendar` (default `minutely`, matching
+`freebusy-sync`'s own interval — same class of risk: a stale remote
+calendar can let a customer double-book a slot the provider already
+took elsewhere). Enabling sync for any given provider is still only
+ever done in the admin UI (see above) — this just makes sure it
+actually runs on a schedule once it is.
+
 ## Apache config: clean URLs + hardening
 
 The upstream image (`php:8.2-apache` based) ships with neither an
@@ -113,6 +141,25 @@ same reasoning as why domain names, secrets, and other deployment-
 specific values live in your inventory repo's `group_vars`, not here.
 `get_url`'s default `force: false` means it only downloads once, not on
 every apply.
+
+## Custom social card (optional)
+
+Same mechanism as the favicon above, for the Open Graph preview image
+(`og:image`) shown when the booking page URL is shared on social media
+or in chat apps — hardcoded as `assets/img/social-card.png` in
+`application/views/layouts/booking_layout.php`, not admin-UI
+configurable. Set `easyappointments_social_card_url` to fetch and
+bind-mount a replacement over
+`/var/www/html/assets/img/social-card.png`. Off by default — the
+upstream image is used if unset.
+
+Unlike the favicon, `easyappointments_social_card_sha256` is required
+whenever the URL is set (asserted at play time) and passed to
+`get_url`'s `checksum` param — this asset is typically fetched from a
+URL on the live public site rather than a private inventory host, so
+the role verifies the fetched bytes match a pinned hash rather than
+trusting whatever the URL returns at apply time. `get_url` only
+re-fetches when the checksum no longer matches what's already on disk.
 
 ## First login
 

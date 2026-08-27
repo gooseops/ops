@@ -1,13 +1,14 @@
 # Incus Modules
 
 Terraform modules for Incus resources, targeting the [`lxc/incus`](https://registry.terraform.io/providers/lxc/incus/latest)
-provider. Two submodules under `1.1/` (the provider minor version they're
-built against, matching this repo's `terraform/modules/proxmox/qemu-vm/`
-versioning convention):
+provider. Two submodules under `v1/` (the provider major version they're
+built against — this repo's per-provider versioning convention; older
+modules like `terraform/modules/proxmox/qemu-vm/` predate it and will be
+renamed to match over time):
 
-- `1.1/instance/` — a single Incus instance (VM or container): config,
+- `v1/instance/` — a single Incus instance (VM or container): config,
   root disk, and one bridged NIC, provisioned via cloud-init.
-- `1.1/profile/` — a single Incus profile: config + device overrides,
+- `v1/profile/` — a single Incus profile: config + device overrides,
   attachable to instances in addition to the cluster's `default` profile.
 
 ## Design notes

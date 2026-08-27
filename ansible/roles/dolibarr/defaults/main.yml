@@ -1,0 +1,56 @@
+---
+# Verify the latest stable tag at hub.docker.com/r/dolibarr/dolibarr
+# before bumping — pin like every other app role in this repo, never
+# float on `latest`.
+dolibarr_version: "23.0.3"
+
+# Host port the reverse proxy (nginx-proxy role) targets. The container
+# only ever serves plain HTTP internally — TLS terminates at nginx, same
+# as every other app in this repo (see authentik/vaultwarden/odoo).
+dolibarr_http_port: "8083"
+
+# The public URL end users will reach this through — must match the
+# nginx-proxy vhost you configure. Passed to the container as
+# DOLI_URL_ROOT.
+dolibarr_url_root: ""
+
+# ----------------------------------------------------------------- #
+# Postgres connection — external, shared host. Same pattern as every
+# other Postgres-backed app role in this repo (authentik, synapse,
+# vaultwarden, mattermost, odoo): this role does not create a database.
+# Run the shared postgresql role against your DB host with a "dolibarr"
+# entry in postgresql_databases/postgresql_users/postgresql_hba_entries
+# first. Dolibarr's official image also supports MySQL/MariaDB, but
+# that's deliberately not exposed as an option here — the entire point
+# of choosing Dolibarr for this repo was to reuse the existing shared
+# Postgres host rather than bundle a second database engine the way
+# easyappointments has to for MySQL. DOLI_DB_TYPE is hardcoded to
+# "pgsql" in the compose template, not made a variable.
+# ----------------------------------------------------------------- #
+dolibarr_postgres_host: ""
+dolibarr_postgres_port: 5432
+dolibarr_postgres_database: "dolibarr"
+dolibarr_postgres_user: "dolibarr"
+
+# ----------------------------------------------------------------- #
+# Secrets. Empty placeholders on purpose — never a real default and
+# never a lookup('env', ...) in this file. Source real values through
+# group_vars/host_vars in your inventory repo. A task-level assertion
+# fails loud if any of these are still empty at play time.
+# ----------------------------------------------------------------- #
+dolibarr_postgres_password: ""
+
+# Passed to the container as DOLI_ADMIN_LOGIN/DOLI_ADMIN_PASSWORD, but
+# see the README's "PostgreSQL disables the automated installer"
+# section before assuming these are your real admin credentials —
+# with DOLI_DB_TYPE=pgsql they are NOT applied automatically the way
+# they would be with the default MySQL/MariaDB setup. Still required
+# and asserted non-empty here: harmless to set, and this role would need
+# them if it's ever pointed at MySQL/MariaDB instead.
+dolibarr_admin_login: "admin"
+dolibarr_admin_password: ""
+
+# Enables Dolibarr's built-in cron runner container-side (DOLI_CRON).
+# Off by default — most homelab-scale instances don't need scheduled
+# jobs (recurring invoices, automated actions) on day one.
+dolibarr_cron_enabled: false

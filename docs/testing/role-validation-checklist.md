@@ -9,8 +9,10 @@ against real infrastructure.
 Covers: `restic`, `odoo`, `authentik`, `easyappointments` (now deployed
 live — see its section for what's still worth re-checking), `jitsi` +
 `coturn` (paired — decommissioned from this homelab, kept for
-reference), and the Incus role/module set (`incus-host`,
-`incus-image-pin`, `firewall`, the Terraform `incus` module).
+reference), the Incus role/module set (`incus-host`,
+`incus-image-pin`, `firewall`, the Terraform `incus` module), and the
+Terraform `openstack` module set (no Ansible role involved — this one's
+pure Terraform against a DevStack scratch environment).
 
 ---
 
@@ -117,6 +119,10 @@ discovering them one role at a time:
    Terraform module) — most complex, most destructive (bridge cutover
    can disconnect the VM), do this last and make sure you have Proxmox
    console access before starting, not just SSH.
+7. **OpenStack Terraform module set** — independent of everything else
+   here (no Ansible role, no dependency on the Incus set), so it can
+   run any time. Needs its own scratch VM, sized for DevStack rather
+   than shared with a lighter role.
 
 ---
 
@@ -468,7 +474,7 @@ EOF
 
 At minimum:
 ```
-cd terraform/modules/incus/1.1/instance && terraform init -backend=false && terraform validate
+cd terraform/modules/incus/v1/instance && terraform init -backend=false && terraform validate
 cd ../profile && terraform init -backend=false && terraform validate
 ```
 (Already done this session — should still pass; this just confirms
@@ -481,6 +487,114 @@ module README's provider block example), `terraform apply`, confirm
 the instance actually boots and is SSH-reachable with the
 `ssh_authorized_keys` you provided, then `terraform destroy` to clean
 up.
+
+---
+
+## 7. Terraform `openstack` module set
+
+No Ansible role here — this validates `terraform/modules/openstack/v3/`
+against a real OpenStack API, since `terraform validate` only confirms
+schema correctness, not that the actual resources this repo composes
+(network → port → instance → floating IP) come up and behave as
+expected.
+
+**What "works" means:** an instance boots on its private network,
+stays unreachable from outside until a floating IP is associated, and
+after association is reachable *only* on the floating (public) address
+— never on the private one from outside the tenant network, and the
+guest's own `ip addr` never shows the floating IP itself (it's pure
+NAT, not configured in-guest — see the provider README's design notes
+for why).
+
+### Standing up the test target: DevStack
+
+DevStack is what `terraform-provider-openstack` itself uses for its
+own acceptance tests, so it's a faithful target, not a toy stand-in.
+
+- Its own scratch VM, sized for DevStack's all-in-one footprint — this
+  is heavier than every other role in this checklist, don't share it
+  with something else. Ubuntu 24.04 (noble), 4 vCPU, 16GB RAM, 80GB
+  disk as a comfortable floor.
+- DevStack refuses to run as root: create a non-root sudo-capable user
+  (conventionally named `stack`) on the VM first, and do everything
+  below as that user.
+- Clone DevStack and configure it:
+  ```
+  git clone https://opendev.org/openstack/devstack /opt/devstack
+  cd /opt/devstack
+  cat > local.conf <<EOF
+  [[local|localrc]]
+  ADMIN_PASSWORD=test-admin-change-me
+  DATABASE_PASSWORD=\$ADMIN_PASSWORD
+  RABBIT_PASSWORD=\$ADMIN_PASSWORD
+  SERVICE_PASSWORD=\$ADMIN_PASSWORD
+  HOST_IP=<scratch-vm-ip>
+  EOF
+  ```
+  Pin a `stable/<release>` branch instead of tracking `master` if you
+  want closer parity with a specific client's actual OpenStack version
+  once you have one; `master` is fine for validating the modules in the
+  abstract.
+- `./stack.sh` — 20-40 minutes, downloads packages plus a small CirrOS
+  test image DevStack seeds by default (handy — no need to hunt down
+  your own `image_id` for a first pass).
+- `source openrc admin admin` (from `/opt/devstack`) to load
+  `OS_AUTH_URL` and admin credentials into the shell. Feed these
+  through Doppler the same way other providers get credentials if
+  you want them to persist across sessions; for a one-off scratch
+  stack, sourcing directly is simpler and this checklist assumes that.
+- `openstack network list --external` — DevStack creates a `public`
+  external network by default. That network's name is what
+  `network`'s `external_network_id` and `floating_ip`'s `pool` need.
+- `openstack image list` / `openstack flavor list` — note the seeded
+  CirrOS image ID and an `m1.nano`/`m1.tiny` flavor name for
+  `instance`'s `image_id`/`flavor_name`.
+
+### Module-level checks (no live target needed)
+
+Already done this session — should still pass, this just confirms
+nothing regressed:
+```
+terraform -chdir=terraform/modules/openstack/v3/network init -backend=false && terraform -chdir=terraform/modules/openstack/v3/network validate
+```
+(repeat for `security_group`, `key_pair`, `instance`, `floating_ip`,
+`volume` — `-chdir` avoids `cd`-plus-redirection in one compound
+command, which some sandboxed setups flag for extra approval).
+
+### Full end-to-end (needs DevStack up, `OS_*` sourced)
+
+Write a throwaway root module (not committed — same reasoning as why
+`ansible/inventory` and `terraform/worlds` stay out of this repo)
+composing the submodules:
+
+- [ ] `network` + `security_group` (allow SSH ingress at minimum) +
+      `key_pair` (your own test public key) apply cleanly.
+- [ ] `instance`, wired to that network/security-group/keypair, applies
+      and `openstack server list` shows it `ACTIVE`.
+- [ ] **Before adding a floating IP**: confirm the instance is *not*
+      reachable from your devbox on its private `access_ip_v4` — proves
+      there's no implicit public route, unlike a public AWS subnet.
+- [ ] Apply `floating_ip` against the instance's `port_id` output.
+      `openstack floating ip list` shows it associated.
+- [ ] SSH now succeeds against the **floating** IP. Once in, confirm
+      `ip addr` inside the guest shows only the private address — the
+      floating IP should never appear there.
+- [ ] `volume`, with `instance_id` set to the running instance: after
+      apply, `openstack volume list` shows it `in-use`, and `lsblk`
+      inside the guest shows the extra device at (or near) the `device`
+      hint you passed.
+- [ ] `terraform destroy` the whole thing. Confirm `openstack server
+      list`, `openstack floating ip list`, and `openstack volume list`
+      are all empty afterward — a leftover floating IP or volume is the
+      easiest thing to miss and the easiest thing to get billed for on
+      a real cloud.
+
+### Cleanup (this section specifically)
+
+Destroy the scratch VM afterward rather than keeping DevStack patched
+between test runs — it's pure test scaffolding, and re-stacking from a
+fresh VM next time is cheaper than maintaining a long-lived DevStack
+install.
 
 ---
 

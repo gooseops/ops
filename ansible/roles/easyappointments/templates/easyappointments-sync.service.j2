@@ -1,0 +1,11 @@
+[Unit]
+Description=Trigger Easy!Appointments calendar sync (Google Calendar + CalDAV)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# --workdir is redundant with the image's own WORKDIR (/var/www/html)
+# but explicit on purpose — see the role README's "Scheduled calendar
+# sync" section on why this shouldn't rely on an implicit default.
+ExecStart=/usr/bin/docker exec --workdir /var/www/html easyappointments-app php index.php console sync

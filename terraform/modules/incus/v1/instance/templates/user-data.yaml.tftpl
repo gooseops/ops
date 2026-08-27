@@ -1,0 +1,55 @@
+#cloud-config
+hostname: ${hostname}
+fqdn: ${fqdn}
+prefer_fqdn_over_hostname: true
+manage_etc_hosts: true
+
+users:
+  - name: ${admin_user}
+    groups: [adm, sudo]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+%{ for key in ssh_authorized_keys ~}
+      - ${key}
+%{ endfor ~}
+
+ssh_pwauth: false
+disable_root: true
+
+package_update: true
+package_upgrade: false
+
+# The images:debian/13/cloud image strips openssh-server and replaces
+# /etc/ssh/sshd_config with a one-line file ("PasswordAuthentication no"),
+# losing UsePAM, the drop-in Include directive, the sftp subsystem,
+# KbdInteractiveAuthentication, and AcceptEnv. We install the server
+# and lay down a deliberate sshd_config that restores the package
+# defaults plus our two opinionated overrides. Without UsePAM yes, the
+# `lock_passwd: true` above results in `!`-locked accounts that sshd's
+# own account check rejects even with a valid pubkey.
+packages:
+  - openssh-server
+
+write_files:
+  - path: /etc/ssh/sshd_config
+    owner: root:root
+    permissions: "0644"
+    content: |
+      Include /etc/ssh/sshd_config.d/*.conf
+
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      UsePAM yes
+
+      Subsystem sftp /usr/lib/openssh/sftp-server
+
+      AcceptEnv LANG LC_* COLORTERM NO_COLOR
+
+runcmd:
+  - [systemctl, restart, ssh]
+%{ if extra_user_data != "" ~}
+
+${extra_user_data}
+%{ endif ~}

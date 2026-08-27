@@ -1,0 +1,10 @@
+[Unit]
+Description=Run easyappointments-sync on a schedule
+
+[Timer]
+OnCalendar={{ easyappointments_sync_on_calendar }}
+RandomizedDelaySec={{ easyappointments_sync_randomized_delay_sec }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

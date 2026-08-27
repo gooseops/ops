@@ -32,6 +32,18 @@ freebusy_sync_lookahead_days: 90
 freebusy_sync_uid_prefix: "freebusy-sync-"
 freebusy_sync_log_level: "INFO"
 
+# IANA zone name (e.g. "America/New_York"), used only to decide where
+# midnight falls for the sync's query-window floor -- see the script's
+# floor_to_local_day() for why that boundary exists at all. Resolved via
+# Python's stdlib zoneinfo, so DST transitions are handled automatically
+# (the same local wall-clock midnight is UTC-4 in summer, UTC-5 in
+# winter for US Eastern) -- never hardcode a fixed UTC offset here for
+# that reason. Left at "UTC" by default (safe, works with zero setup);
+# override in group_vars/host_vars to the timezone that actually matches
+# how you think about "today", same as every other deployment-specific
+# value in this role.
+freebusy_sync_timezone: "UTC"
+
 # State file the script uses to avoid recreating/orphaning CalDAV UIDs
 # across runs — see the script's own module-level comment on why this
 # matters. Kept under the install dir rather than the default

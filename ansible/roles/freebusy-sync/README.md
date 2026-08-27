@@ -75,6 +75,28 @@ python3 sync_freebusy_to_nextcloud.py --dry-run --verbose
 `.env`/`.venv/` here are gitignored (repo-wide `.env`/`.venv` patterns)
 — safe to create and leave, or delete once satisfied.
 
+## Already-happened events are kept, not cleaned up
+
+Once a busy block's end time has passed, the script stops touching it —
+it stays on the Nextcloud calendar permanently rather than getting
+deleted the next time it falls outside the query window. This is
+deliberate: the calendar doubles as a look-back record of when you were
+actually busy, not just a rolling forward-looking availability mirror.
+`sync_busy_blocks` in the script only ever deletes a locally-tracked
+block when it disappears from Google's freebusy response *while still
+due to be in range* (its recorded end is still `>= ` the query's
+`timeMin`) — that's the signal for "this was actually cancelled/changed
+upstream," as opposed to "time simply moved past it," which is the
+common case and not a reason to delete anything.
+
+That query window itself is floored to the start of the current UTC day
+rather than the literal current instant, specifically so an
+already-in-progress event's reported start (and therefore its content
+fingerprint) stays constant for the whole day instead of drifting every
+time the `minutely` timer fires — without that, an in-progress event
+would get needlessly deleted and recreated on every run for its entire
+duration.
+
 ## What this role does not do
 
 - Doesn't create the Google service account, enable domain-wide
@@ -82,9 +104,12 @@ python3 sync_freebusy_to_nextcloud.py --dry-run --verbose
   console-only steps (Google in particular: app-password-equivalent
   credentials for service accounts have no create API to automate
   against).
-- Doesn't back up `sync_state.json` — losing it isn't destructive (the
-  script just recreates busy blocks under fresh UIDs on the next run,
-  orphaning the old ones server-side rather than corrupting anything),
-  so it wasn't judged worth a dedicated `restic` job. Revisit if orphaned
-  stale events in Nextcloud Calendar becomes an actual recurring
-  annoyance.
+- Doesn't back up `sync_state.json`. Losing it doesn't delete anything
+  already on the Nextcloud calendar (deletions only ever act on entries
+  the state file actually knows about) — but it does mean the script
+  loses track of every UID it previously created, including historical
+  ones: still-current blocks get recreated under fresh UIDs (harmless,
+  same as before), while every already-synced block, past or future,
+  becomes untracked and permanently un-cleanable if its source event is
+  later genuinely cancelled. Not judged worth a dedicated `restic` job
+  for that reason alone — revisit if that scenario actually happens.

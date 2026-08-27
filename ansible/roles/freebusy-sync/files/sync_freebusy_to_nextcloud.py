@@ -36,6 +36,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List
+from zoneinfo import ZoneInfo
 
 from dateutil import parser as dateutil_parser
 from dotenv import load_dotenv
@@ -67,6 +68,7 @@ class Config:
 
     # Sync window
     lookahead_days: int
+    timezone: str
 
     # Nextcloud CalDAV target
     nextcloud_base_url: str
@@ -98,6 +100,15 @@ class Config:
 
         key_path = Path(cls._require("GOOGLE_SERVICE_ACCOUNT_KEY_PATH")).expanduser()
 
+        tz_name = os.environ.get("SYNC_TIMEZONE", "UTC")
+        try:
+            ZoneInfo(tz_name)
+        except Exception as exc:
+            raise SystemExit(
+                f"SYNC_TIMEZONE={tz_name!r} is not a valid IANA zone name "
+                f"(e.g. 'America/New_York', 'UTC'): {exc}"
+            )
+
         state_path = Path(
             os.environ.get(
                 "SYNC_STATE_PATH",
@@ -110,6 +121,7 @@ class Config:
             google_impersonate_subject=cls._require("GOOGLE_IMPERSONATE_SUBJECT"),
             google_calendar_ids=calendar_ids,
             lookahead_days=int(os.environ.get("SYNC_LOOKAHEAD_DAYS", "90")),
+            timezone=tz_name,
             nextcloud_base_url=cls._require("NEXTCLOUD_BASE_URL"),
             nextcloud_calendar_url=cls._require("NEXTCLOUD_CALENDAR_URL"),
             nextcloud_username=cls._require("NEXTCLOUD_USERNAME"),
@@ -158,22 +170,58 @@ def get_google_credentials(cfg: Config) -> service_account.Credentials:
     return creds
 
 
-def fetch_busy_blocks(creds: service_account.Credentials, calendar_ids: List[str], lookahead_days: int) -> List[dict]:
+def floor_to_local_day(moment_utc: datetime, tz_name: str) -> datetime:
+    """
+    Floors a UTC datetime to local midnight of the same day in tz_name,
+    expressed back in UTC.
+
+    Used as the freebusy query's timeMin instead of the raw current
+    instant -- see fetch_busy_blocks for why that matters. The boundary
+    only needs to be stable for much longer than the sync interval, so
+    plain UTC midnight would satisfy that too -- this floors to tz_name's
+    midnight instead so the boundary actually lines up with what "today"
+    means to a person in that zone, rather than shifting at whatever
+    local hour UTC midnight happens to fall on. zoneinfo resolves DST
+    transitions automatically (e.g. US Eastern midnight is UTC-4 in
+    summer, UTC-5 in winter) -- never hardcode a fixed UTC offset here,
+    it'll be wrong for half the year.
+    """
+    local_midnight = moment_utc.astimezone(ZoneInfo(tz_name)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return local_midnight.astimezone(timezone.utc)
+
+
+def fetch_busy_blocks(
+    creds: service_account.Credentials, calendar_ids: List[str], time_min: datetime, lookahead_days: int
+) -> List[dict]:
     """
     Queries the freebusy.query endpoint for each configured calendar ID.
     This only ever returns opaque busy/free time ranges -- Google's API
     does not include event titles or details in this response, regardless
     of the access level (owner, reader, or freeBusyReader) granted on the
     source calendar. That makes it a good fit for privacy-scoped syncing.
+
+    time_min is expected to be floor_to_local_day(now, tz_name), not now
+    itself. Google's freebusy API clips returned busy intervals to the
+    query window -- an event already in progress at timeMin gets its
+    reported start clipped to timeMin, not its real start. This script's
+    content fingerprint (see _content_fingerprint) is derived from that
+    reported start, so if time_min were the raw current instant -- which
+    this timer re-samples every minute -- an in-progress event's
+    fingerprint would change on every single run, and reconcile would
+    read that as "old block gone, new block appeared", needlessly
+    deleting and recreating the same event every minute for its entire
+    duration. Flooring to local midnight keeps an in-progress event's
+    fingerprint stable all day; it only shifts once, at the next local
+    midnight rollover.
     """
     service = build("calendar", "v3", credentials=creds)
-    now = datetime.now(timezone.utc)
-    time_min = now.isoformat()
-    time_max = (now + timedelta(days=lookahead_days)).isoformat()
+    time_max = time_min + timedelta(days=lookahead_days)
 
     body = {
-        "timeMin": time_min,
-        "timeMax": time_max,
+        "timeMin": time_min.isoformat(),
+        "timeMax": time_max.isoformat(),
         "items": [{"id": cid} for cid in calendar_ids],
     }
 
@@ -215,6 +263,19 @@ def fetch_busy_blocks(creds: service_account.Credentials, calendar_ids: List[str
 # to detect create/delete/unchanged locally) to the actual opaque UID
 # written to the server, so each logical busy block gets exactly one UID
 # for its entire lifetime.
+#
+# Each entry also stores the block's end time. Google's freebusy.query
+# only ever returns blocks at or after timeMin -- once a block's end
+# passes below the query window, it silently stops appearing in the
+# fetch, which would otherwise look identical to the source event having
+# been cancelled. Recording end lets reconcile tell those apart: a block
+# still due to be in the window (end >= this run's time_min) that
+# vanished from the fetch really was removed/changed upstream and gets
+# deleted; a block that's simply aged out of the window is left alone
+# permanently, so already-happened events stay on the Nextcloud calendar
+# as a durable record instead of being swept the next time the window
+# rolls forward. Entries written before this field existed have no "end"
+# -- treated as not-deletable (see _is_deletable) rather than guessed at.
 
 def _load_state(path: Path) -> dict:
     if not path.exists():
@@ -235,6 +296,23 @@ def _save_state(path: Path, state: dict) -> None:
 def _content_fingerprint(block: dict) -> str:
     raw = f"{block['source_calendar']}|{block['start']}|{block['end']}"
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _is_deletable(entry: dict, time_min: datetime) -> bool:
+    """
+    Whether a state entry that fell out of this run's fetch is safe to
+    delete -- see the module-level comment above _load_state for why
+    that's not the same question as "is it missing from desired".
+    """
+    end_raw = entry.get("end")
+    if not end_raw:
+        # No recorded end -- either a legacy entry from before this
+        # field existed, or bookkeeping got confused somewhere. Either
+        # way, there's no way to tell already-happened history apart
+        # from a genuine cancellation, so leave it alone rather than
+        # risk deleting a historical record.
+        return False
+    return dateutil_parser.isoparse(end_raw) >= time_min
 
 
 # --------------------------------------------------------------------------
@@ -272,7 +350,9 @@ def _build_ical(uid: str, start: datetime, end: datetime) -> str:
     return ical.to_ical().decode("utf-8")
 
 
-def sync_busy_blocks(calendar: caldav.Calendar, busy_blocks: List[dict], uid_prefix: str, state_path: Path, dry_run: bool) -> None:
+def sync_busy_blocks(
+    calendar: caldav.Calendar, busy_blocks: List[dict], uid_prefix: str, state_path: Path, time_min: datetime, dry_run: bool
+) -> None:
     state = _load_state(state_path)
 
     desired: dict = {}
@@ -286,15 +366,33 @@ def sync_busy_blocks(calendar: caldav.Calendar, busy_blocks: List[dict], uid_pre
     existing_fps = set(state.keys())
     desired_fps = set(desired.keys())
 
+    missing = existing_fps - desired_fps
+    to_delete = {fp for fp in missing if _is_deletable(state[fp], time_min)}
+    kept_as_history = missing - to_delete
     to_create = desired_fps - existing_fps
-    to_delete = existing_fps - desired_fps
     unchanged = desired_fps & existing_fps
 
-    for fp in to_delete:
-        uid = state[fp]["uid"]
-        if dry_run:
-            logging.info("[dry-run] would delete stale block (uid=%s)", uid)
-        else:
+    # Backfills "end" onto entries written before that field existed,
+    # while they're still confirmed matching a fetched block -- so
+    # legacy entries age into the _is_deletable logic above instead of
+    # being permanently exempt from it for lacking data this run can
+    # supply for free.
+    for fp in unchanged:
+        state[fp].setdefault("end", desired[fp]["end"].isoformat())
+
+    # Everything below is wrapped so a failure partway through still
+    # persists whatever succeeded before it -- previously an unguarded
+    # exception here (most likely from calendar.save_event, a plain
+    # network call that can fail transiently) would propagate straight
+    # out of this function, skipping _save_state entirely and leaving
+    # the state file out of sync with deletes/creates that had already
+    # actually happened against the live server.
+    try:
+        for fp in to_delete:
+            uid = state[fp]["uid"]
+            if dry_run:
+                logging.info("[dry-run] would delete stale block (uid=%s)", uid)
+                continue
             try:
                 event = calendar.event_by_uid(uid)
                 event.delete()
@@ -302,25 +400,30 @@ def sync_busy_blocks(calendar: caldav.Calendar, busy_blocks: List[dict], uid_pre
                 logging.warning("Could not delete uid=%s (may already be gone): %s", uid, exc)
             del state[fp]
 
-    for fp in to_create:
-        # Never derived from content, never reused -- see module-level
-        # comment above on why that matters for Nextcloud's trash bin.
-        uid = f"{uid_prefix}{uuid.uuid4().hex[:16]}"
-        start = desired[fp]["start"]
-        end = desired[fp]["end"]
-        if dry_run:
-            logging.info("[dry-run] would create uid=%s: %s -> %s", uid, start, end)
-        else:
-            calendar.save_event(_build_ical(uid, start, end))
-            state[fp] = {"uid": uid}
+        for fp in to_create:
+            # Never derived from content, never reused -- see
+            # module-level comment above on why that matters for
+            # Nextcloud's trash bin.
+            uid = f"{uid_prefix}{uuid.uuid4().hex[:16]}"
+            start = desired[fp]["start"]
+            end = desired[fp]["end"]
+            if dry_run:
+                logging.info("[dry-run] would create uid=%s: %s -> %s", uid, start, end)
+                continue
+            try:
+                calendar.save_event(_build_ical(uid, start, end))
+            except Exception as exc:
+                logging.warning("Could not create block (fp=%s, %s -> %s): %s", fp, start, end, exc)
+                continue
+            state[fp] = {"uid": uid, "end": end.isoformat()}
+    finally:
+        if not dry_run:
+            _save_state(state_path, state)
 
     logging.info(
-        "Reconcile complete: %d created, %d deleted, %d unchanged",
-        len(to_create), len(to_delete), len(unchanged),
+        "Reconcile complete: %d created, %d deleted, %d unchanged, %d kept as history",
+        len(to_create), len(to_delete), len(unchanged), len(kept_as_history),
     )
-
-    if not dry_run:
-        _save_state(state_path, state)
 
 
 # --------------------------------------------------------------------------
@@ -340,13 +443,15 @@ def main() -> int:
     logging.info("Loading Google service account credentials (impersonating %s).", cfg.google_impersonate_subject)
     creds = get_google_credentials(cfg)
 
+    time_min = floor_to_local_day(datetime.now(timezone.utc), cfg.timezone)
+
     logging.info("Querying free/busy for: %s", ", ".join(cfg.google_calendar_ids))
-    busy_blocks = fetch_busy_blocks(creds, cfg.google_calendar_ids, cfg.lookahead_days)
+    busy_blocks = fetch_busy_blocks(creds, cfg.google_calendar_ids, time_min, cfg.lookahead_days)
 
     logging.info("Connecting to Nextcloud calendar at %s", cfg.nextcloud_calendar_url)
     calendar = connect_nextcloud_calendar(cfg)
 
-    sync_busy_blocks(calendar, busy_blocks, cfg.sync_uid_prefix, cfg.sync_state_path, args.dry_run)
+    sync_busy_blocks(calendar, busy_blocks, cfg.sync_uid_prefix, cfg.sync_state_path, time_min, args.dry_run)
 
     logging.info("Sync complete.")
     return 0

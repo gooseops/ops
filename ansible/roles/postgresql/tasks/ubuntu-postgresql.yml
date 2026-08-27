@@ -1,4 +1,35 @@
 ---
+- name: Postgresql Role | Assert superuser password is set and not the placeholder
+  ansible.builtin.assert:
+    that:
+      - postgresql_superuser_password | length > 0
+      - postgresql_superuser_password != "changethis"
+    fail_msg: >
+      postgresql_superuser_password is unset or still the placeholder
+      "changethis". Source a real credential through group_vars/host_vars
+      in your inventory repo before running this role — see
+      defaults/main.yml.
+  tags:
+    - postgresql
+
+# A single aggregate assert rather than looping over postgresql_users:
+# looping would put each item (including its plaintext userpass) into
+# the task result, which would then need no_log — and no_log on an
+# assert also swallows fail_msg on failure, leaving just "output hidden"
+# instead of a useful error. This gets a real error message without ever
+# putting a secret into the task result in the first place.
+- name: Postgresql Role | Assert every app user has a non-empty password
+  ansible.builtin.assert:
+    that:
+      - postgresql_users | selectattr('userpass', 'defined') | selectattr('userpass', 'ne', '') | list | length == postgresql_users | length
+    fail_msg: >
+      One or more postgresql_users entries has an empty or undefined
+      userpass. Source real credentials through group_vars/host_vars in
+      your inventory repo before running this role — see
+      defaults/main.yml.
+  tags:
+    - postgresql
+
 - name: Postgresql Role | System Dependencies
   become: true
   ansible.builtin.apt:
@@ -104,3 +135,52 @@
         template: "{{ item.db_template | default('') }}"
       loop: "{{ postgresql_databases }}"
       no_log: true
+
+    # --- Teardown: move an entry from postgresql_databases/_users/
+    # _hba_entries into the matching *_absent list below to have this
+    # role actually drop it, rather than leaving stale state behind when
+    # an entry is just deleted outright (see the README's "pg_hba.conf
+    # entries are append/update-only" section — the same non-pruning
+    # behavior applies to users/databases, which is what this section
+    # fixes). Order matters: databases first (clears the role's
+    # ownership, which DROP ROLE requires), hba entries next, users
+    # last. force: false (community.postgresql.postgresql_db's default)
+    # is deliberately not overridden — a database that can't drop
+    # because something is still connected to it is a real signal the
+    # app wasn't actually stopped, not something to force through.
+    - name: Postgresql Role | Remove | Drop Postgresql Databases
+      become: true
+      become_user: postgres
+      vars:
+        ansible_ssh_pipelining: true
+      community.postgresql.postgresql_db:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ postgresql_databases_absent }}"
+
+    - name: Postgresql Role | Remove | Remove PostgreSQL HBA Entries
+      community.postgresql.postgresql_pg_hba:
+        dest: "{{ postgresql_hba_path }}"
+        contype: "{{ item.contype | default('host') }}"
+        users: "{{ item.user }}"
+        source: "{{ item.ip }}"
+        databases: "{{ item.db }}"
+        state: absent
+      loop: "{{ postgresql_hba_entries_absent }}"
+      notify: Restart Postgresql
+
+    # No fail_on_user override (module default is true, i.e. fail loud):
+    # a role that still owns something after its database(s) above are
+    # dropped means it owned more than just its one database (grants
+    # elsewhere, extra objects) — that's worth stopping and looking at,
+    # not silently ignoring. If this fails, run `DROP OWNED BY <user>;`
+    # manually first (see the README), then re-run.
+    - name: Postgresql Role | Remove | Drop Postgresql Users
+      become: true
+      become_user: postgres
+      vars:
+        ansible_ssh_pipelining: true
+      community.postgresql.postgresql_user:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ postgresql_users_absent }}"

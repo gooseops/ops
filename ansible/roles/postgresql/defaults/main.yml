@@ -21,3 +21,19 @@ postgresql_databases:
   - db_name: "myapp"
     db_user: "user"
     db_encoding: "UTF8"
+
+# ----------------------------------------------------------------- #
+# Teardown. Empty by default — this role never drops anything on its
+# own. To decommission an app's database/user/hba entry, move the
+# entry out of postgresql_databases/postgresql_users/
+# postgresql_hba_entries above and into the matching list below instead
+# of just deleting it outright — otherwise it's left stale (see the
+# README). postgresql_databases_absent/postgresql_users_absent are
+# plain lists of names (the password isn't needed to drop something);
+# postgresql_hba_entries_absent takes the same shape as
+# postgresql_hba_entries (db/user/ip/contype — method isn't needed to
+# remove a rule).
+# ----------------------------------------------------------------- #
+postgresql_databases_absent: []
+postgresql_users_absent: []
+postgresql_hba_entries_absent: []
